@@ -3,12 +3,13 @@ package web
 import (
 	"errors"
 	"fmt"
-	regexp "github.com/dlclark/regexp2"
-	"github.com/gin-contrib/sessions"
-	"github.com/gin-gonic/gin"
 	"nekaihoshi/server/src/domain"
 	"nekaihoshi/server/src/service"
 	"net/http"
+
+	regexp "github.com/dlclark/regexp2"
+	"github.com/gin-contrib/sessions"
+	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {

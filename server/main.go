@@ -2,7 +2,7 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-22 14:52:22
  * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-04-22 17:37:54
+ * @LastEditTime: 2025-04-23 19:02:33
  * @FilePath: \nekaihoshi\server\main.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -80,7 +80,8 @@ func initDB() *gorm.DB {
 
 func initUser(db *gorm.DB) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
-	repo := repository.NewUserRepository(ud)
+	wpud := dao.NewUserWordpressInfoDAO(db)
+	repo := repository.NewUserRepository(ud, wpud)
 	svc := service.NewUserService(repo)
 	return web.NewUserHandler(svc)
 }
