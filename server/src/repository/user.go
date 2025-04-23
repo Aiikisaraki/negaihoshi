@@ -12,6 +12,8 @@ import (
 	"context"
 	"nekaihoshi/server/src/domain"
 	"nekaihoshi/server/src/repository/dao"
+
+	"github.com/redis/go-redis/v9"
 )
 
 var (
@@ -21,14 +23,16 @@ var (
 )
 
 type UserRepository struct {
-	udao   *dao.UserDAO
-	wpudao *dao.UserWordpressInfoDAO
+	udao        *dao.UserDAO
+	wpudao      *dao.UserWordpressInfoDAO
+	redisClient *redis.Client
 }
 
-func NewUserRepository(udao *dao.UserDAO, wpudao *dao.UserWordpressInfoDAO) *UserRepository {
+func NewUserRepository(udao *dao.UserDAO, wpudao *dao.UserWordpressInfoDAO, rc *redis.Client) *UserRepository {
 	return &UserRepository{
-		udao:   udao,
-		wpudao: wpudao,
+		udao:        udao,
+		wpudao:      wpudao,
+		redisClient: rc,
 	}
 }
 

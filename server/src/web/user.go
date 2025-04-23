@@ -33,7 +33,7 @@ func NewUserHandler(svc *service.UserService) *UserHandler {
 }
 
 func (u *UserHandler) RegisterUserRoutes(server *gin.Engine) {
-	ug := server.Group("/users")
+	ug := server.Group("/api/users")
 	ug.POST("/signup", u.Signup)
 	ug.POST("/login", u.Login)
 }
@@ -121,4 +121,10 @@ func (u *UserHandler) Login(c *gin.Context) {
 	sess.Save()
 	c.String(http.StatusOK, "登录成功")
 	return
+}
+
+func (u *UserHandler) BindWordPressInfo(c *gin.Context) {
+	type BindWordPressInfoReq struct {
+		WPuid int64 `json:"wpuid"`
+	}
 }
