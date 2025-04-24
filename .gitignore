@@ -18,10 +18,6 @@
 go.work
 go.work.sum
 
-# Go modules
-go.mod
-go.sum
-
 # Temporary files created by GoLand
 .idea/
 
@@ -38,3 +34,5 @@ go.sum
 # Build directories
 build/
 dist/
+go.mod
+go.sum
