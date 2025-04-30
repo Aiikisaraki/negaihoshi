@@ -2,7 +2,7 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-22 15:07:13
  * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-04-23 11:35:34
+ * @LastEditTime: 2025-04-30 11:11:15
  * @FilePath: \nekaihoshi\server\src\repository\user.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -10,8 +10,11 @@ package repository
 
 import (
 	"context"
+	"encoding/json"
 	"nekaihoshi/server/src/domain"
 	"nekaihoshi/server/src/repository/dao"
+	"strconv"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -38,12 +41,26 @@ func NewUserRepository(udao *dao.UserDAO, wpudao *dao.UserWordpressInfoDAO, rc *
 
 func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
 	// 先从cache里面找
+	urs, err := r.redisClient.Get(ctx, "userInfo-"+strconv.FormatInt(id, 10)).Result()
+	if err == nil {
+		return domain.User{}, err
+	}
+	var u dao.User
+	err = json.Unmarshal([]byte(urs), &u)
+	if err != nil {
+		return domain.User{}, err
+	}
 	// 再从dao里面找
-	u, err := r.udao.FindById(ctx, id)
+	u, err = r.udao.FindById(ctx, id)
 	if err != nil {
 		return domain.User{}, err
 	}
 	// 找到了回写cache
+	dataJson, err := json.Marshal(u)
+	if err != nil {
+		return domain.User{}, err
+	}
+	r.redisClient.Set(ctx, "userInfo-"+strconv.FormatInt(id, 10), dataJson, 4320*time.Hour)
 
 	return domain.User{
 		Id:       u.Id,
@@ -65,17 +82,82 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 }
 
 func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
-	return r.udao.Insert(ctx, dao.User{
+	insertData := dao.User{
 		Email:    u.Email,
 		Password: u.Password,
-	})
+	}
+	err := r.udao.Insert(ctx, insertData)
+	if err != nil {
+		return err
+	}
 	// 在这里操作缓存
+	uinfo, err := r.udao.FindByEmail(ctx, u.Email)
+	if err != nil {
+		return err
+	}
+	dataJson, err := json.Marshal(uinfo)
+	if err != nil {
+		return err
+	}
+	r.redisClient.Set(ctx, "userInfo-"+strconv.FormatInt(uinfo.Id, 10), dataJson, 4320*time.Hour)
+	return err
 }
 
 func (r *UserRepository) CreateWordpressInfo(ctx context.Context, wpui domain.UserWordpressInfo) error {
-	return r.wpudao.Insert(ctx, dao.UserWordpressInfo{
-		Uid:   wpui.Uid,
-		WPuid: wpui.WPuid,
-	})
+	insertData := dao.UserWordpressInfo{
+		Uid:      wpui.Uid,
+		WPuname:  wpui.WPuname,
+		WPApiKey: wpui.WPApiKey,
+	}
+	err := r.wpudao.Insert(ctx, insertData)
+	if err != nil {
+		return err
+	}
 	// 在这里操作缓存
+	dataJson, err := json.Marshal(insertData)
+	if err != nil {
+		return err
+	}
+	r.redisClient.Set(ctx, "userWPInfo-"+strconv.FormatInt(insertData.Uid, 10), dataJson, 4320*time.Hour)
+	return r.wpudao.Insert(ctx, insertData)
+}
+
+func (r *UserRepository) FindWordpressInfoByUid(ctx context.Context, uid int64) (domain.UserWordpressInfo, error) {
+	// 先从cache里面找
+	urs, err := r.redisClient.Get(ctx, "userWPInfo-"+strconv.FormatInt(uid, 10)).Result()
+	if err == nil {
+		return domain.UserWordpressInfo{}, err
+	}
+	var uwpinfo dao.UserWordpressInfo
+	err = json.Unmarshal([]byte(urs), &uwpinfo)
+	if err != nil {
+		return domain.UserWordpressInfo{}, err
+	}
+	// 再从dao里面找
+	uwpinfo, err = r.wpudao.FindByUid(ctx, uid)
+	if err != nil {
+		return domain.UserWordpressInfo{}, err
+	}
+	// 找到了回写cache
+	dataJson, err := json.Marshal(uwpinfo)
+	if err != nil {
+		return domain.UserWordpressInfo{}, err
+	}
+	r.redisClient.Set(ctx, "userInfo-"+strconv.FormatInt(uid, 10), dataJson, 4320*time.Hour)
+
+	return domain.UserWordpressInfo{
+		Id:      uwpinfo.Id,
+		Uid:     uwpinfo.Uid,
+		WPuname: uwpinfo.WPuname,
+	}, nil
+}
+
+func (r *UserRepository) DeleteWordpressInfoByUid(ctx context.Context, uid int64) error {
+	err := r.wpudao.DeleteByUid(ctx, uid)
+	if err != nil {
+		return err
+	}
+	// 在这里操作缓存
+	r.redisClient.Del(ctx, "userWPInfo-"+strconv.FormatInt(uid, 10))
+	return nil
 }

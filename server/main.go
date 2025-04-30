@@ -1,14 +1,16 @@
 /*
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-22 14:52:22
- * @LastEditors: Aii如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-04-23 21:10:01
+ * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
+ * @LastEditTime: 2025-04-24 09:11:41
  * @FilePath: \nekaihoshi\server\main.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
 package main
 
 import (
+	"context"
+	"fmt"
 	"nekaihoshi/server/src/repository"
 	"nekaihoshi/server/src/repository/dao"
 	"nekaihoshi/server/src/service"
@@ -30,7 +32,8 @@ import (
 
 func main() {
 	db := initDB()
-	u := initUser(db)
+	redisClient := initRedis()
+	u := initUser(db, redisClient)
 	r := initWebServer()
 	u.RegisterUserRoutes(r)
 	r.GET("/", func(c *gin.Context) {
@@ -80,20 +83,25 @@ func initDB() *gorm.DB {
 	return db
 }
 
-func initUser(db *gorm.DB) *web.UserHandler {
+func initUser(db *gorm.DB, rc *redis.Client) *web.UserHandler {
 	ud := dao.NewUserDAO(db)
 	wpud := dao.NewUserWordpressInfoDAO(db)
-	redisClient := initRedis()
-	repo := repository.NewUserRepository(ud, wpud, redisClient)
+	repo := repository.NewUserRepository(ud, wpud, rc)
 	svc := service.NewUserService(repo)
 	return web.NewUserHandler(svc)
 }
 
 func initRedis() *redis.Client {
+	ctx := context.Background()
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     "192.168.57.191:6379",
-		Password: "", // no password set
-		DB:       0,  // use default DB
+		Password: "Ajm428252", // no password set
+		DB:       0,           // use default DB
 	})
+	_, err := rdb.Ping(ctx).Result()
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("成功连接redis")
 	return rdb
 }

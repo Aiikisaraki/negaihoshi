@@ -1,3 +1,11 @@
+/*
+ * @Author: Aii 如樱如月 morikawa@kimisui56.work
+ * @Date: 2025-04-23 11:10:48
+ * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
+ * @LastEditTime: 2025-04-30 11:36:46
+ * @FilePath: \nekaihoshi\server\src\repository\dao\user_wordpress_info.go
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 package dao
 
 import (
@@ -27,10 +35,11 @@ func NewUserWordpressInfoDAO(db *gorm.DB) *UserWordpressInfoDAO {
 type UserWordpressInfo struct {
 	Id int64 `gorm:"primaryKey,autoIncrement"`
 	// 设置为唯一索引
-	Uid   int64 `gorm:"unique"`
-	WPuid int64
-	Ctime int64
-	Utime int64
+	Uid      int64 `gorm:"unique"`
+	WPuname  string
+	WPApiKey string
+	Ctime    int64
+	Utime    int64
 }
 
 func (dao *UserWordpressInfoDAO) Insert(ctx context.Context, wpui UserWordpressInfo) error {
@@ -46,4 +55,14 @@ func (dao *UserWordpressInfoDAO) Insert(ctx context.Context, wpui UserWordpressI
 		}
 	}
 	return err
+}
+
+func (dao *UserWordpressInfoDAO) FindByUid(ctx context.Context, uid int64) (UserWordpressInfo, error) {
+	var uwpinfo UserWordpressInfo
+	err := dao.db.WithContext(ctx).Where("uid = ?", uid).First(&uwpinfo).Error
+	return uwpinfo, err
+}
+
+func (dao *UserWordpressInfoDAO) DeleteByUid(ctx context.Context, uid int64) error {
+	return dao.db.WithContext(ctx).Where("uid = ?", uid).Delete(&UserWordpressInfo{}).Error
 }
