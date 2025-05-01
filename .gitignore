@@ -36,3 +36,5 @@ build/
 dist/
 go.mod
 go.sum
+
+server/config/config.json

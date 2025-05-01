@@ -11,8 +11,8 @@ package repository
 import (
 	"context"
 	"encoding/json"
-	"nekaihoshi/server/src/domain"
-	"nekaihoshi/server/src/repository/dao"
+	"negaihoshi/server/src/domain"
+	"negaihoshi/server/src/repository/dao"
 	"strconv"
 	"time"
 

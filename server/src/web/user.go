@@ -3,8 +3,8 @@ package web
 import (
 	"errors"
 	"fmt"
-	"nekaihoshi/server/src/domain"
-	"nekaihoshi/server/src/service"
+	"negaihoshi/server/src/domain"
+	"negaihoshi/server/src/service"
 	"net/http"
 	"strconv"
 

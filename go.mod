@@ -1,4 +1,4 @@
-module nekaihoshi
+module negaihoshi
 
 go 1.24.1
 

@@ -2,7 +2,7 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-22 14:52:22
  * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-04-24 09:11:41
+ * @LastEditTime: 2025-05-01 20:19:26
  * @FilePath: \nekaihoshi\server\main.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -11,11 +11,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"nekaihoshi/server/src/repository"
-	"nekaihoshi/server/src/repository/dao"
-	"nekaihoshi/server/src/service"
-	"nekaihoshi/server/src/web"
-	"nekaihoshi/server/src/web/middleware"
+	"negaihoshi/server/config"
+	"negaihoshi/server/src/repository"
+	"negaihoshi/server/src/repository/dao"
+	"negaihoshi/server/src/service"
+	"negaihoshi/server/src/web"
+	"negaihoshi/server/src/web/middleware"
+
 	"net/http"
 	"strings"
 	"time"
@@ -31,22 +33,36 @@ import (
 )
 
 func main() {
-	db := initDB()
-	redisClient := initRedis()
+	config, err := initConfig()
+	if err != nil {
+		panic(err)
+	}
+	db := initDB(&config)
+	redisClient := initRedis(&config)
 	u := initUser(db, redisClient)
-	r := initWebServer()
+	t := initTreeHole(db)
+	r := initWebServer(&config)
 	u.RegisterUserRoutes(r)
+	t.RegisterTreeHoleRoutes(r)
 	r.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Hi, this is Aii's Private API~")
 	})
 	r.Static("/assets", "./assets")
 	r.StaticFile("/favicon.ico", "./assets/favicon.ico")
-	r.Run(":9292")
+	serverPort := config.GetServerPort()
+	r.Run(":" + serverPort)
 }
 
-func initWebServer() *gin.Engine {
-	r := web.RegisterRoutes()
+func initConfig() (config.ConfigFunction, error) {
+	configPath := "config/config.json"
+	config := config.ConfigFunction{}
+	err := config.ReadConfiguration(configPath)
+	return config, err
+}
 
+func initWebServer(config *config.ConfigFunction) *gin.Engine {
+	r := web.RegisterRoutes()
+	frontendPrefix := config.GetFrontendPrefix()
 	r.Use(cors.New(cors.Config{
 		AllowHeaders:     []string{"Content-Type", "Authorization"},
 		AllowCredentials: true,
@@ -54,7 +70,7 @@ func initWebServer() *gin.Engine {
 			if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
 				return true
 			}
-			return strings.HasPrefix(origin, "http://localhost:3000")
+			return strings.HasPrefix(origin, frontendPrefix[0])
 		},
 		MaxAge: 12 * time.Hour,
 	}))
@@ -69,14 +85,23 @@ func initWebServer() *gin.Engine {
 	return r
 }
 
-func initDB() *gorm.DB {
-	db, err := gorm.Open(mysql.Open("nekaihoshi:Hrj4EwdNapE3L3bE@tcp(192.168.57.191:3306)/nekaihoshi?charset=utf8mb4&parseTime=True&loc=Local"))
+func initDB(config *config.ConfigFunction) *gorm.DB {
+	_, dbHost, dbPort, dbUser, dbPassword, dbDatabaseName := config.GetDatabaseConfig()
+	db, err := gorm.Open(mysql.Open(dbUser + ":" + dbPassword + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbDatabaseName + "?charset=utf8mb4&parseTime=True&loc=Local"))
 	if err != nil {
 		// panic相当于整个goroutine结束
 		panic(err)
 	}
 
 	err = dao.InitUserTable(db)
+	if err != nil {
+		panic(err)
+	}
+	err = dao.InitUserWordpressInfoTable(db)
+	if err != nil {
+		panic(err)
+	}
+	err = dao.InitTreeHoleTable(db)
 	if err != nil {
 		panic(err)
 	}
@@ -91,12 +116,20 @@ func initUser(db *gorm.DB, rc *redis.Client) *web.UserHandler {
 	return web.NewUserHandler(svc)
 }
 
-func initRedis() *redis.Client {
+func initTreeHole(db *gorm.DB) *web.TreeHoleHandler {
+	td := dao.NewTreeHoleDAO(db)
+	repo := repository.NewTreeHoleRepository(td)
+	svc := service.NewTreeHoleService(repo)
+	return web.NewTreeHoleHandler(svc)
+}
+
+func initRedis(config *config.ConfigFunction) *redis.Client {
 	ctx := context.Background()
+	redisHost, redisPort, redisPassword := config.GetRedisConfig()
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "192.168.57.191:6379",
-		Password: "Ajm428252", // no password set
-		DB:       0,           // use default DB
+		Addr:     redisHost + ":" + redisPort, // 连接地址和端口,
+		Password: redisPassword,               // no password set
+		DB:       0,                           // use default DB
 	})
 	_, err := rdb.Ping(ctx).Result()
 	if err != nil {
