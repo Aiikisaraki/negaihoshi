@@ -33,16 +33,16 @@ import (
 )
 
 func main() {
-	config, err := initConfig()
+	serverConfig, err := initConfig()
 	if err != nil {
 		panic(err)
 	}
-	db := initDB(&config)
-	redisClient := initRedis(&config)
+	db := initDB(&serverConfig)
+	redisClient := initRedis(&serverConfig)
 	u := initUser(db, redisClient)
 	t := initTreeHole(db)
 	s := initPersonalTextStatus(db)
-	r := initWebServer(&config)
+	r := initWebServer(&serverConfig)
 	u.RegisterUserRoutes(r)
 	t.RegisterTreeHoleRoutes(r)
 	s.RegisterStatusRoutes(r)
@@ -51,15 +51,15 @@ func main() {
 	})
 	r.Static("/assets", "./assets")
 	r.StaticFile("/favicon.ico", "./assets/favicon.ico")
-	serverPort := config.GetServerPort()
+	serverPort := serverConfig.GetServerPort()
 	r.Run(":" + serverPort)
 }
 
 func initConfig() (config.ConfigFunction, error) {
 	configPath := "config/config.json"
-	config := config.ConfigFunction{}
-	err := config.ReadConfiguration(configPath)
-	return config, err
+	serverConfig := config.ConfigFunction{}
+	err := serverConfig.ReadConfiguration(configPath)
+	return serverConfig, err
 }
 
 func initWebServer(config *config.ConfigFunction) *gin.Engine {
