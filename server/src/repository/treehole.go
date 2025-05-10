@@ -2,7 +2,7 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-05-01 19:59:02
  * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-05-01 21:29:07
+ * @LastEditTime: 2025-05-02 16:48:28
  * @FilePath: \negaihoshi\server\src\repository\treehole.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */

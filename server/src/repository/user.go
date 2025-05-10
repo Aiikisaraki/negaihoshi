@@ -2,7 +2,7 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-22 15:07:13
  * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-04-30 11:11:15
+ * @LastEditTime: 2025-05-02 16:26:21
  * @FilePath: \nekaihoshi\server\src\repository\user.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -100,7 +100,7 @@ func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 		return err
 	}
 	r.redisClient.Set(ctx, "userInfo-"+strconv.FormatInt(uinfo.Id, 10), dataJson, 4320*time.Hour)
-	return err
+	return nil
 }
 
 func (r *UserRepository) CreateWordpressInfo(ctx context.Context, wpui domain.UserWordpressInfo) error {
@@ -119,13 +119,13 @@ func (r *UserRepository) CreateWordpressInfo(ctx context.Context, wpui domain.Us
 		return err
 	}
 	r.redisClient.Set(ctx, "userWPInfo-"+strconv.FormatInt(insertData.Uid, 10), dataJson, 4320*time.Hour)
-	return r.wpudao.Insert(ctx, insertData)
+	return nil
 }
 
 func (r *UserRepository) FindWordpressInfoByUid(ctx context.Context, uid int64) (domain.UserWordpressInfo, error) {
 	// 先从cache里面找
 	urs, err := r.redisClient.Get(ctx, "userWPInfo-"+strconv.FormatInt(uid, 10)).Result()
-	if err == nil {
+	if err != nil {
 		return domain.UserWordpressInfo{}, err
 	}
 	var uwpinfo dao.UserWordpressInfo
@@ -145,10 +145,15 @@ func (r *UserRepository) FindWordpressInfoByUid(ctx context.Context, uid int64) 
 	}
 	r.redisClient.Set(ctx, "userInfo-"+strconv.FormatInt(uid, 10), dataJson, 4320*time.Hour)
 
+	seconds := uwpinfo.Ctime / 1000
+	nanoseconds := (uwpinfo.Ctime % 1000) * 1e6
+	t := time.Unix(seconds, nanoseconds)
 	return domain.UserWordpressInfo{
-		Id:      uwpinfo.Id,
-		Uid:     uwpinfo.Uid,
-		WPuname: uwpinfo.WPuname,
+		Id:       uwpinfo.Id,
+		Uid:      uwpinfo.Uid,
+		WPuname:  uwpinfo.WPuname,
+		WPApiKey: uwpinfo.WPApiKey,
+		Ctime:    t,
 	}, nil
 }
 

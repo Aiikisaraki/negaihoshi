@@ -2,7 +2,7 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-22 14:52:22
  * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-05-01 20:19:26
+ * @LastEditTime: 2025-05-09 21:25:40
  * @FilePath: \nekaihoshi\server\main.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -41,9 +41,11 @@ func main() {
 	redisClient := initRedis(&config)
 	u := initUser(db, redisClient)
 	t := initTreeHole(db)
+	s := initPersonalTextStatus(db)
 	r := initWebServer(&config)
 	u.RegisterUserRoutes(r)
 	t.RegisterTreeHoleRoutes(r)
+	s.RegisterStatusRoutes(r)
 	r.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Hi, this is Aii's Private API~")
 	})
@@ -77,10 +79,12 @@ func initWebServer(config *config.ConfigFunction) *gin.Engine {
 	store := cookie.NewStore([]byte("secret"))
 	r.Use(sessions.Sessions("ssid", store))
 	r.Use(middleware.NewLoginMiddlewareBuilder().
-		IgnorePaths("/users/signup").
-		IgnorePaths("/users/login").
+		IgnorePaths("/api/users/signup").
+		IgnorePaths("/api/users/login").
 		IgnorePaths("/").
 		IgnorePaths("/favicon.ico").
+		IgnorePaths("/api/treehole/list").
+		IgnorePaths("/api/treehole/list/*").
 		Build())
 	return r
 }
@@ -121,6 +125,13 @@ func initTreeHole(db *gorm.DB) *web.TreeHoleHandler {
 	repo := repository.NewTreeHoleRepository(td)
 	svc := service.NewTreeHoleService(repo)
 	return web.NewTreeHoleHandler(svc)
+}
+
+func initPersonalTextStatus(db *gorm.DB) *web.StatusHandler {
+	sd := dao.NewStatusDAO(db)
+	repo := repository.NewStatusRepository(sd)
+	svc := service.NewStatusService(repo)
+	return web.NewStatusHandler(svc)
 }
 
 func initRedis(config *config.ConfigFunction) *redis.Client {

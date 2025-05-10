@@ -2,7 +2,7 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-05-01 14:57:12
  * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-05-01 21:24:27
+ * @LastEditTime: 2025-05-08 20:37:15
  * @FilePath: \negaihoshi\server\src\web\treehole.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -55,6 +55,7 @@ func (t *TreeHoleHandler) CreateTreeHoleMessage(ctx *gin.Context) {
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
 	}
+	ctx.String(http.StatusOK, "添加成功")
 }
 
 func (t *TreeHoleHandler) GetTreeHoleMessageList(ctx *gin.Context) {
@@ -63,8 +64,7 @@ func (t *TreeHoleHandler) GetTreeHoleMessageList(ctx *gin.Context) {
 		PageSize int `json:"pageSize"`
 	}
 	var req TreeHoleMessageListReq
-	if err := ctx.Bind(&req); err != nil {
-		ctx.String(http.StatusOK, "系统错误")
+	if err := ctx.ShouldBindJSON(&req); err != nil {
 		return
 	}
 	mess, err := t.svc.GetTreeHoleMessageList(ctx, req.PageNum, req.PageSize)
@@ -80,8 +80,8 @@ func (t *TreeHoleHandler) GetUserTreeHoleMessageList(ctx *gin.Context) {
 		PageSize int `json:"pageSize"`
 	}
 	var req TreeHoleMessageListReq
-	if err := ctx.Bind(&req); err != nil {
-		ctx.String(http.StatusOK, "系统错误")
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		// ctx.String(http.StatusOK, "系统错误")
 		return
 	}
 	sess := sessions.Default(ctx)
