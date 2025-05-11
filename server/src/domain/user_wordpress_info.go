@@ -16,4 +16,5 @@ type UserWordpressInfo struct {
 	WPuname  string
 	WPApiKey string
 	Ctime    time.Time
+	SiteInfo WordpressSite
 }

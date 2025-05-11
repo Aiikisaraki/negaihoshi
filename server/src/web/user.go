@@ -149,6 +149,7 @@ func (u *UserHandler) BindWordPressInfo(c *gin.Context) {
 	})
 	if err != nil {
 		c.String(http.StatusOK, "绑定失败")
+		return
 	}
 	c.String(http.StatusOK, "绑定成功")
 }
@@ -161,8 +162,10 @@ func (u *UserHandler) GetWordPressInfo(c *gin.Context) {
 		return
 	}
 	uwpinfo, err := u.svc.GetWordPressInfo(c, uid.(int64))
+	fmt.Println(err) // 输出 uwpinfo 的值以检查其内容和类型
 	if err != nil {
 		c.String(http.StatusOK, "系统错误")
+		return
 	}
 	c.JSON(http.StatusOK, uwpinfo)
 }
@@ -177,6 +180,7 @@ func (u *UserHandler) DeleteWordPressInfo(c *gin.Context) {
 	err := u.svc.DeleteWordPressInfo(c, uid.(int64))
 	if err != nil {
 		c.String(http.StatusOK, "删除失败")
+		return
 	}
 	c.String(http.StatusOK, "删除成功")
 }

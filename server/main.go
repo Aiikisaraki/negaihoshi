@@ -1,8 +1,8 @@
 /*
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-22 14:52:22
- * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-05-09 21:25:40
+ * @LastEditors: Aiikisaraki morikawa@kimisui56.work
+ * @LastEditTime: 2025-05-11 11:17:49
  * @FilePath: \nekaihoshi\server\main.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -10,14 +10,17 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"negaihoshi/server/config"
 	"negaihoshi/server/src/repository"
 	"negaihoshi/server/src/repository/dao"
+	"negaihoshi/server/src/request"
 	"negaihoshi/server/src/service"
 	"negaihoshi/server/src/web"
 	"negaihoshi/server/src/web/middleware"
 
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -37,6 +40,16 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	// 测试
+	wpR := request.NewWpRequest()
+	resp, _ := wpR.GetWpUserData("https://blog.kimisui56.work", 1)
+	body, _ := io.ReadAll(resp.Body)
+	fmt.Println("原始响应:", string(body))
+	var result map[string]interface{}
+	json.Unmarshal(body, &result)
+	fmt.Println("解析后的数据:", result)
+
 	db := initDB(&serverConfig)
 	redisClient := initRedis(&serverConfig)
 	u := initUser(db, redisClient)
@@ -45,7 +58,7 @@ func main() {
 	r := initWebServer(&serverConfig)
 	u.RegisterUserRoutes(r)
 	t.RegisterTreeHoleRoutes(r)
-	s.RegisterStatusRoutes(r)
+	s.RegisterStatusAndPostsRoutes(r)
 	r.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "Hi, this is Aii's Private API~")
 	})
@@ -127,11 +140,12 @@ func initTreeHole(db *gorm.DB) *web.TreeHoleHandler {
 	return web.NewTreeHoleHandler(svc)
 }
 
-func initPersonalTextStatus(db *gorm.DB) *web.StatusHandler {
+func initPersonalTextStatus(db *gorm.DB) *web.StatusAndPostsHandler {
 	sd := dao.NewStatusDAO(db)
-	repo := repository.NewStatusRepository(sd)
-	svc := service.NewStatusService(repo)
-	return web.NewStatusHandler(svc)
+	pd := dao.NewPostsDAO(db)
+	repo := repository.NewStatusAndPostsRepository(sd, pd)
+	svc := service.NewStatusAndPostsService(repo)
+	return web.NewStatusAndPostsHandler(svc)
 }
 
 func initRedis(config *config.ConfigFunction) *redis.Client {

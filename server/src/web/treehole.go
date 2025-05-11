@@ -54,6 +54,7 @@ func (t *TreeHoleHandler) CreateTreeHoleMessage(ctx *gin.Context) {
 	})
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
+		return
 	}
 	ctx.String(http.StatusOK, "添加成功")
 }
@@ -70,6 +71,7 @@ func (t *TreeHoleHandler) GetTreeHoleMessageList(ctx *gin.Context) {
 	mess, err := t.svc.GetTreeHoleMessageList(ctx, req.PageNum, req.PageSize)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
+		return
 	}
 	ctx.JSON(http.StatusOK, mess)
 }
@@ -89,6 +91,7 @@ func (t *TreeHoleHandler) GetUserTreeHoleMessageList(ctx *gin.Context) {
 	mess, err := t.svc.GetUserTreeHoleMessageList(ctx, userId, req.PageNum, req.PageSize)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
+		return
 	}
 	ctx.JSON(http.StatusOK, mess)
 }
@@ -103,6 +106,7 @@ func (t *TreeHoleHandler) GetTreeHoleMessage(ctx *gin.Context) {
 	mess, err := t.svc.GetTreeHoleMessage(ctx, id)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
+		return
 	}
 	ctx.JSON(http.StatusOK, mess)
 }
@@ -117,6 +121,7 @@ func (t *TreeHoleHandler) DeleteTreeHoleMessage(ctx *gin.Context) {
 	err = t.svc.DeleteTreeHoleMessage(ctx, id)
 	if err != nil {
 		ctx.String(http.StatusOK, "系统错误")
+		return
 	}
 	ctx.String(http.StatusOK, "删除成功")
 }

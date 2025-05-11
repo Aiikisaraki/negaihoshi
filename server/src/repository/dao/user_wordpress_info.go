@@ -1,8 +1,8 @@
 /*
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-23 11:10:48
- * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-04-30 11:36:46
+ * @LastEditors: Aiikisaraki morikawa@kimisui56.work
+ * @LastEditTime: 2025-05-11 10:18:35
  * @FilePath: \nekaihoshi\server\src\repository\dao\user_wordpress_info.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -35,11 +35,18 @@ func NewUserWordpressInfoDAO(db *gorm.DB) *UserWordpressInfoDAO {
 type UserWordpressInfo struct {
 	Id int64 `gorm:"primaryKey,autoIncrement"`
 	// 设置为唯一索引
-	Uid      int64 `gorm:"unique"`
-	WPuname  string
-	WPApiKey string
-	Ctime    int64
-	Utime    int64
+	Uid             int64 `gorm:"unique"`
+	WPuname         string
+	WPApiKey        string
+	Ctime           int64
+	Utime           int64
+	SiteWhiteListId int64              `sql:"type:integer REFERENCES wordpress_whitelist(id) on update no action on delete no action"`
+	SiteWhiteList   WordpressWhitelist `gorm:"foreignkey:SiteWhiteListId;association_foreignkey:Id"`
+}
+
+type WordpressWhitelist struct {
+	Id        int64  `gorm:"primaryKey,autoIncrement"`
+	WPSiteUrl string `gorm:"unique"`
 }
 
 func (dao *UserWordpressInfoDAO) Insert(ctx context.Context, wpui UserWordpressInfo) error {
@@ -59,7 +66,7 @@ func (dao *UserWordpressInfoDAO) Insert(ctx context.Context, wpui UserWordpressI
 
 func (dao *UserWordpressInfoDAO) FindByUid(ctx context.Context, uid int64) (UserWordpressInfo, error) {
 	var uwpinfo UserWordpressInfo
-	err := dao.db.WithContext(ctx).Where("uid = ?", uid).First(&uwpinfo).Error
+	err := dao.db.WithContext(ctx).Preload("SiteWhiteList").Where("uid = ?", uid).First(&uwpinfo).Error
 	return uwpinfo, err
 }
 

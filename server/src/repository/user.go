@@ -1,8 +1,8 @@
 /*
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-22 15:07:13
- * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-05-02 16:26:21
+ * @LastEditors: Aiikisaraki morikawa@kimisui56.work
+ * @LastEditTime: 2025-05-11 10:25:52
  * @FilePath: \nekaihoshi\server\src\repository\user.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -123,16 +123,35 @@ func (r *UserRepository) CreateWordpressInfo(ctx context.Context, wpui domain.Us
 }
 
 func (r *UserRepository) FindWordpressInfoByUid(ctx context.Context, uid int64) (domain.UserWordpressInfo, error) {
-	// 先从cache里面找
-	urs, err := r.redisClient.Get(ctx, "userWPInfo-"+strconv.FormatInt(uid, 10)).Result()
-	if err != nil {
-		return domain.UserWordpressInfo{}, err
-	}
 	var uwpinfo dao.UserWordpressInfo
-	err = json.Unmarshal([]byte(urs), &uwpinfo)
-	if err != nil {
-		return domain.UserWordpressInfo{}, err
-	}
+	var err error
+	var t time.Time
+	var wordpessSiteInfo domain.WordpressSite
+	var seconds int64
+	// 先从cache里面找
+	// urs, err := r.redisClient.Get(ctx, "userWPInfo-"+strconv.FormatInt(uid, 10)).Result()
+	// var uwpinfo dao.UserWordpressInfo
+	// err = json.Unmarshal([]byte(urs), &uwpinfo)
+
+	// seconds := uwpinfo.Ctime / 1000
+	// nanoseconds := (uwpinfo.Ctime % 1000) * 1e6
+	// t := time.Unix(seconds, nanoseconds)
+
+	// wordpessSiteInfo := domain.WordpressSite{
+	// 	Id:  uwpinfo.SiteWhiteList.Id,
+	// 	Url: uwpinfo.SiteWhiteList.WPSiteUrl,
+	// }
+
+	// if err == nil {
+	// 	return domain.UserWordpressInfo{
+	// 		Id:       uwpinfo.Id,
+	// 		Uid:      uwpinfo.Uid,
+	// 		WPuname:  uwpinfo.WPuname,
+	// 		WPApiKey: uwpinfo.WPApiKey,
+	// 		Ctime:    t,
+	// 		SiteInfo: wordpessSiteInfo,
+	// 	}, nil
+	// }
 	// 再从dao里面找
 	uwpinfo, err = r.wpudao.FindByUid(ctx, uid)
 	if err != nil {
@@ -143,17 +162,24 @@ func (r *UserRepository) FindWordpressInfoByUid(ctx context.Context, uid int64) 
 	if err != nil {
 		return domain.UserWordpressInfo{}, err
 	}
-	r.redisClient.Set(ctx, "userInfo-"+strconv.FormatInt(uid, 10), dataJson, 4320*time.Hour)
 
-	seconds := uwpinfo.Ctime / 1000
+	wordpessSiteInfo = domain.WordpressSite{
+		Id:  uwpinfo.SiteWhiteList.Id,
+		Url: uwpinfo.SiteWhiteList.WPSiteUrl,
+	}
+
+	seconds = uwpinfo.Ctime / 1000
 	nanoseconds := (uwpinfo.Ctime % 1000) * 1e6
-	t := time.Unix(seconds, nanoseconds)
+	t = time.Unix(seconds, nanoseconds)
+
+	r.redisClient.Set(ctx, "userInfo-"+strconv.FormatInt(uid, 10), dataJson, 4320*time.Hour)
 	return domain.UserWordpressInfo{
 		Id:       uwpinfo.Id,
 		Uid:      uwpinfo.Uid,
 		WPuname:  uwpinfo.WPuname,
 		WPApiKey: uwpinfo.WPApiKey,
 		Ctime:    t,
+		SiteInfo: wordpessSiteInfo,
 	}, nil
 }
 
