@@ -1,8 +1,8 @@
 /*
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-22 14:52:22
- * @LastEditors: Aiikisaraki morikawa@kimisui56.work
- * @LastEditTime: 2025-05-11 11:17:49
+ * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
+ * @LastEditTime: 2025-05-11 14:22:46
  * @FilePath: \nekaihoshi\server\main.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -10,17 +10,18 @@ package main
 
 import (
 	"context"
-	"encoding/json"
+	// "encoding/json"
 	"fmt"
 	"negaihoshi/server/config"
 	"negaihoshi/server/src/repository"
 	"negaihoshi/server/src/repository/dao"
-	"negaihoshi/server/src/request"
+
+	// "negaihoshi/server/src/request"
 	"negaihoshi/server/src/service"
 	"negaihoshi/server/src/web"
 	"negaihoshi/server/src/web/middleware"
 
-	"io"
+	// "io"
 	"net/http"
 	"strings"
 	"time"
@@ -42,13 +43,14 @@ func main() {
 	}
 
 	// 测试
-	wpR := request.NewWpRequest()
-	resp, _ := wpR.GetWpUserData("https://blog.kimisui56.work", 1)
-	body, _ := io.ReadAll(resp.Body)
-	fmt.Println("原始响应:", string(body))
-	var result map[string]interface{}
-	json.Unmarshal(body, &result)
-	fmt.Println("解析后的数据:", result)
+	// wpR := request.NewWpRequest()
+	// url := "https://blog.kimisui56.work"
+	// resp, _ := wpR.TransferPosts(url, 1, "test", "test", "morikawa56", "jwLA 92JR qPwe kUme QzBg CHkZ")
+	// body, _ := io.ReadAll(resp.Body)
+	// fmt.Println("原始响应:", string(body))
+	// var result map[string]interface{}
+	// json.Unmarshal(body, &result)
+	// fmt.Println("解析后的数据:", result)
 
 	db := initDB(&serverConfig)
 	redisClient := initRedis(&serverConfig)

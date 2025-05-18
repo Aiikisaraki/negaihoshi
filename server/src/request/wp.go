@@ -1,8 +1,8 @@
 /*
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-23 10:38:53
- * @LastEditors: Aiikisaraki morikawa@kimisui56.work
- * @LastEditTime: 2025-05-10 20:23:41
+ * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
+ * @LastEditTime: 2025-05-11 14:05:14
  * @FilePath: \negaihoshi\server\src\request\wp.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -65,13 +65,13 @@ func (w *WpRequest) TransferStatus(siteUrl string, uid int64, content string, us
 	return http.DefaultClient.Do(req)
 }
 
-func (w *WpRequest) TransferPosts(siteUrl string, uid int64, content string, userName string, apiKey string, title string) (*http.Response, error) {
+func (w *WpRequest) TransferPosts(siteUrl string, uid int64, title string, content string, userName string, apiKey string) (*http.Response, error) {
 	url := siteUrl + "/wp-json/wp/v2/posts"
 	// 1. 准备JSON请求体
 	payload := map[string]interface{}{
 		"status": "publish",
 		"title": map[string]interface{}{
-			"rendered": title,
+			"raw": title,
 		},
 		"content": map[string]interface{}{
 			"raw":       content,
