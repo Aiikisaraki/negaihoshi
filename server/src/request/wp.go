@@ -2,7 +2,7 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-04-23 10:38:53
  * @LastEditors: Aiikisaraki morikawa@kimisui56.work
- * @LastEditTime: 2025-05-10 20:23:41
+ * @LastEditTime: 2025-05-16 07:59:49
  * @FilePath: \negaihoshi\server\src\request\wp.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -36,7 +36,7 @@ func (w *WpRequest) TransferStatus(siteUrl string, uid int64, content string, us
 	payload := map[string]interface{}{
 		"status": "publish",
 		"title": map[string]interface{}{
-			"rendered": "",
+			"raw": "",
 		},
 		"content": map[string]interface{}{
 			"raw":       content,
@@ -71,7 +71,7 @@ func (w *WpRequest) TransferPosts(siteUrl string, uid int64, content string, use
 	payload := map[string]interface{}{
 		"status": "publish",
 		"title": map[string]interface{}{
-			"rendered": title,
+			"raw": title,
 		},
 		"content": map[string]interface{}{
 			"raw":       content,

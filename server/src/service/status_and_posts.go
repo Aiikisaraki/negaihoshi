@@ -16,9 +16,11 @@ func NewStatusAndPostsService(repo *repository.StatusAndPostsRepository) *Status
 }
 
 func (s *StatusAndPostsService) CreateStatusMessage(c *gin.Context, status domain.Status) error {
-	return nil
+	err := s.repo.CreateStatus(c, status)
+	return err
 }
 
 func (s *StatusAndPostsService) CreatePostsMessage(c *gin.Context, posts domain.Posts) error {
-	return nil
+	err := s.repo.CreatePosts(c, posts)
+	return err
 }
