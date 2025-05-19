@@ -38,9 +38,17 @@ func NewStatusAndPostsRepository(sdao *dao.StatusDAO, pdao *dao.PostsDAO) *Statu
 	}
 }
 
-func (s *StatusAndPostsRepository) Create(ctx *gin.Context, status domain.Status) error {
+func (s *StatusAndPostsRepository) CreateStatus(ctx *gin.Context, status domain.Status) error {
 	return s.sdao.Insert(ctx, dao.Status{
 		Content: status.Content,
 		UserId:  status.UserId,
+	})
+}
+
+func (s *StatusAndPostsRepository) CreatePosts(ctx *gin.Context, posts domain.Posts) error {
+	return s.pdao.Insert(ctx, dao.Posts{
+		Title:   posts.Title,
+		Content: posts.Content,
+		UserId:  posts.UserId,
 	})
 }
