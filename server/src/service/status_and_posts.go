@@ -24,3 +24,13 @@ func (s *StatusAndPostsService) CreatePostsMessage(c *gin.Context, posts domain.
 	err := s.repo.CreatePosts(c, posts)
 	return err
 }
+
+func (s *StatusAndPostsService) EditStatusMessage(c *gin.Context, status domain.Status) error {
+	err := s.repo.EditStatus(c, status)
+	return err
+}
+
+func (s *StatusAndPostsService) EditPostsMessage(c *gin.Context, posts domain.Posts) error {
+	err := s.repo.EditPosts(c, posts)
+	return err
+}

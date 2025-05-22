@@ -1,8 +1,8 @@
 /*
  * @Author: Aiikisaraki morikawa@kimisui56.work
  * @Date: 2025-05-10 17:32:11
- * @LastEditors: Aiikisaraki morikawa@kimisui56.work
- * @LastEditTime: 2025-05-16 07:59:05
+ * @LastEditors: error: error: git config user.name & please set dead value or install git && error: git config user.email & please set dead value or install git & please set dead value or install git
+ * @LastEditTime: 2025-05-22 20:36:08
  * @FilePath: \negaihoshi\server\src\web\status_and_posts.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -146,7 +146,7 @@ func (t *StatusAndPostsHandler) EditStatusAndPostsMessage(ctx *gin.Context) {
 				ctx.String(http.StatusOK, "转发至 WordPress 失败")
 			}
 		}
-		err = t.svc.CreateStatusMessage(ctx, domain.Status{
+		err = t.svc.EditStatusMessage(ctx, domain.Status{
 			Id:      req.Id,
 			Content: req.Content,
 			UserId:  userId,
