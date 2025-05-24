@@ -34,3 +34,19 @@ func (s *StatusAndPostsService) EditPostsMessage(c *gin.Context, posts domain.Po
 	err := s.repo.EditPosts(c, posts)
 	return err
 }
+
+func (s *StatusAndPostsService) GetPostFromThisSite(c *gin.Context, id int64) (domain.Posts, error) {
+	return s.repo.GetPosts(c, id)
+}
+
+func (s *StatusAndPostsService) GetStatusFromThisSite(c *gin.Context, id int64) (domain.Status, error) {
+	return s.repo.GetStatus(c, id)
+}
+
+func (s *StatusAndPostsService) GetStatusByUser(c *gin.Context, uid int64) ([]domain.Status, error) {
+	return s.repo.FindStatusByUser(c, uid)
+}
+
+func (s *StatusAndPostsService) GetPostsByUser(c *gin.Context, uid int64) ([]domain.Posts, error) {
+	return s.repo.FindPostsByUser(c, uid)
+}

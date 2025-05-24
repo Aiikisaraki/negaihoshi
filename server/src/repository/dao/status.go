@@ -1,8 +1,8 @@
 /*
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-05-08 21:28:09
- * @LastEditors: error: error: git config user.name & please set dead value or install git && error: git config user.email & please set dead value or install git & please set dead value or install git
- * @LastEditTime: 2025-05-22 20:55:00
+ * @LastEditors: Aiikisaraki morikawa@kimisui56.work
+ * @LastEditTime: 2025-05-24 22:45:41
  * @FilePath: \negaihoshi\server\src\repository\dao\status.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -43,6 +43,12 @@ func (dao *StatusDAO) Insert(ctx context.Context, status Status) error {
 func (dao *StatusDAO) FindById(ctx context.Context, id int64) (Status, error) {
 	var status Status
 	err := dao.db.Where("id =?", id).First(&status).Error
+	return status, err
+}
+
+func (dao *StatusDAO) FindByUid(ctx context.Context, uid int64) ([]Status, error) {
+	var status []Status
+	err := dao.db.Where("user_id =?", uid).Find(&status).Error
 	return status, err
 }
 

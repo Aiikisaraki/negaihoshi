@@ -1,8 +1,8 @@
 /*
  * @Author: Aiikisaraki morikawa@kimisui56.work
  * @Date: 2025-05-10 17:32:11
- * @LastEditors: error: error: git config user.name & please set dead value or install git && error: git config user.email & please set dead value or install git & please set dead value or install git
- * @LastEditTime: 2025-05-22 20:36:08
+ * @LastEditors: Aiikisaraki morikawa@kimisui56.work
+ * @LastEditTime: 2025-05-24 22:52:15
  * @FilePath: \negaihoshi\server\src\web\status_and_posts.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -160,10 +160,57 @@ func (t *StatusAndPostsHandler) EditStatusAndPostsMessage(ctx *gin.Context) {
 }
 
 func (t *StatusAndPostsHandler) GetStatusAndPostsMessage(ctx *gin.Context) {
-
+	type GetMessageReq struct {
+		Id     int64 `json:"id"`
+		IsPost bool  `json:"isPost"`
+	}
+	var req GetMessageReq
+	var err error
+	if err = ctx.Bind(&req); err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	if req.IsPost {
+		post, err := t.svc.GetPostFromThisSite(ctx, req.Id)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
+		ctx.JSON(http.StatusOK, post)
+	} else {
+		status, err := t.svc.GetStatusFromThisSite(ctx, req.Id)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
+		ctx.JSON(http.StatusOK, status)
+	}
 }
 func (t *StatusAndPostsHandler) GetUserStatusAndPostsMessageList(ctx *gin.Context) {
-
+	type GetMessageListReq struct {
+		UserId int64 `json:"userId"`
+		IsPost bool  `json:"isPost"`
+	}
+	var req GetMessageListReq
+	var err error
+	if err = ctx.Bind(&req); err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	if req.IsPost {
+		posts, err := t.svc.GetPostsByUser(ctx, req.UserId)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+		}
+		ctx.JSON(http.StatusOK, posts)
+	} else {
+		status, err := t.svc.GetStatusByUser(ctx, req.UserId)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+		}
+		ctx.JSON(http.StatusOK, status)
+	}
+	return
 }
 func (t *StatusAndPostsHandler) GetStatusAndPostsMessageList(ctx *gin.Context) {
 
