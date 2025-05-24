@@ -2,7 +2,7 @@
  * @Author: Aiikisaraki morikawa@kimisui56.work
  * @Date: 2025-05-10 17:32:11
  * @LastEditors: Aiikisaraki morikawa@kimisui56.work
- * @LastEditTime: 2025-05-24 22:52:15
+ * @LastEditTime: 2025-05-24 22:59:49
  * @FilePath: \negaihoshi\server\src\web\status_and_posts.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -213,8 +213,56 @@ func (t *StatusAndPostsHandler) GetUserStatusAndPostsMessageList(ctx *gin.Contex
 	return
 }
 func (t *StatusAndPostsHandler) GetStatusAndPostsMessageList(ctx *gin.Context) {
-
+	type GetMessageListReq struct {
+		IsPost bool `json:"isPost"`
+	}
+	var req GetMessageListReq
+	var err error
+	if err = ctx.Bind(&req); err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	if req.IsPost {
+		posts, err := t.svc.GetPostsMessageList(ctx)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
+		ctx.JSON(http.StatusOK, posts)
+	} else {
+		status, err := t.svc.GetStatusMessageList(ctx)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
+		ctx.JSON(http.StatusOK, status)
+	}
+	return
 }
 func (t *StatusAndPostsHandler) DeleteStatusAndPostsMessage(ctx *gin.Context) {
-
+	type DeleteMessageReq struct {
+		Id     int64 `json:"id"`
+		IsPost bool  `json:"isPost"`
+	}
+	var req DeleteMessageReq
+	var err error
+	if err = ctx.Bind(&req); err != nil {
+		ctx.String(http.StatusOK, "系统错误")
+		return
+	}
+	if req.IsPost {
+		err = t.svc.DeletePosts(ctx, req.Id)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
+	} else {
+		err = t.svc.DeleteStatus(ctx, req.Id)
+		if err != nil {
+			ctx.String(http.StatusOK, "系统错误")
+			return
+		}
+	}
+	ctx.String(http.StatusOK, "删除成功")
+	return
 }

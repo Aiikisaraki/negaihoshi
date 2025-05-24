@@ -2,7 +2,7 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-05-08 21:28:09
  * @LastEditors: Aiikisaraki morikawa@kimisui56.work
- * @LastEditTime: 2025-05-24 22:45:41
+ * @LastEditTime: 2025-05-24 22:54:44
  * @FilePath: \negaihoshi\server\src\repository\dao\status.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -52,8 +52,19 @@ func (dao *StatusDAO) FindByUid(ctx context.Context, uid int64) ([]Status, error
 	return status, err
 }
 
+func (dao *StatusDAO) GetAllRecord(ctx context.Context) ([]Status, error) {
+	var status []Status
+	err := dao.db.Find(&status).Error
+	return status, err
+}
+
 func (dao *StatusDAO) Update(ctx context.Context, status Status) error {
 	status.Utime = time.Now().UnixMilli()
 	err := dao.db.WithContext(ctx).Save(&status).Error
+	return err
+}
+
+func (dao *StatusDAO) Delete(ctx context.Context, id int64) error {
+	err := dao.db.WithContext(ctx).Delete(&Status{}, id).Error
 	return err
 }

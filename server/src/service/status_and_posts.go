@@ -50,3 +50,21 @@ func (s *StatusAndPostsService) GetStatusByUser(c *gin.Context, uid int64) ([]do
 func (s *StatusAndPostsService) GetPostsByUser(c *gin.Context, uid int64) ([]domain.Posts, error) {
 	return s.repo.FindPostsByUser(c, uid)
 }
+
+func (s *StatusAndPostsService) GetStatusMessageList(c *gin.Context) ([]domain.Status, error) {
+	return s.repo.GetAllStatus(c)
+}
+
+func (s *StatusAndPostsService) GetPostsMessageList(c *gin.Context) ([]domain.Posts, error) {
+	return s.repo.GetAllPosts(c)
+}
+
+func (s *StatusAndPostsService) DeleteStatus(c *gin.Context, id int64) error {
+	err := s.repo.DeleteStatus(c, id)
+	return err
+}
+
+func (s *StatusAndPostsService) DeletePosts(c *gin.Context, id int64) error {
+	err := s.repo.DeletePosts(c, id)
+	return err
+}

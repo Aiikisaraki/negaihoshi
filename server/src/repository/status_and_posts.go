@@ -2,7 +2,7 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-05-08 21:28:29
  * @LastEditors: Aiikisaraki morikawa@kimisui56.work
- * @LastEditTime: 2025-05-24 22:48:42
+ * @LastEditTime: 2025-05-24 22:58:40
  * @FilePath: \negaihoshi\server\src\repository\status.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -118,4 +118,51 @@ func (s *StatusAndPostsRepository) FindPostsByUser(ctx *gin.Context, uid int64) 
 		}
 		return posts
 	}(res), nil
+}
+
+func (s *StatusAndPostsRepository) GetAllStatus(c *gin.Context) ([]domain.Status, error) {
+	res, err := s.sdao.GetAllRecord(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(res []dao.Status) []domain.Status {
+		var status []domain.Status
+		for _, v := range res {
+			status = append(status, domain.Status{
+				Id:      v.Id,
+				Content: v.Content,
+				UserId:  v.UserId,
+			})
+		}
+		return status
+	}(res), nil
+}
+
+func (s *StatusAndPostsRepository) GetAllPosts(c *gin.Context) ([]domain.Posts, error) {
+	res, err := s.pdao.GetAllRecord(c)
+	if err != nil {
+		return nil, err
+	}
+
+	return func(res []dao.Posts) []domain.Posts {
+		var posts []domain.Posts
+		for _, v := range res {
+			posts = append(posts, domain.Posts{
+				Id:      v.Id,
+				Title:   v.Title,
+				Content: v.Content,
+				UserId:  v.UserId,
+			})
+		}
+		return posts
+	}(res), nil
+}
+
+func (s *StatusAndPostsRepository) DeleteStatus(c *gin.Context, id int64) error {
+	return s.sdao.Delete(c, id)
+}
+
+func (s *StatusAndPostsRepository) DeletePosts(c *gin.Context, id int64) error {
+	return s.pdao.Delete(c, id)
 }
