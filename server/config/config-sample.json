@@ -1,0 +1,19 @@
+{
+    "frontend-prefix": [
+        "http://localhost:3000"
+    ],
+    "server-port": "9292",
+    "database": {
+        "type": "mysql",
+        "host": "",
+        "port": "",
+        "user": "",
+        "password": "",
+        "database-name": ""
+    },
+    "redis": {
+        "host": "",
+        "port": "",
+        "password": ""
+    }
+}
