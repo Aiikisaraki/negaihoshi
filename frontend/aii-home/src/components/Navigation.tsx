@@ -1,8 +1,8 @@
 /*
  * @Author: Aiikisaraki morikawa@kimisui56.work
  * @Date: 2025-05-25 10:42:45
- * @LastEditors: Aiikisaraki morikawa@kimisui56.work
- * @LastEditTime: 2025-05-25 10:46:42
+ * @LastEditors: Aii如樱如月 morikawa2021@163.com
+ * @LastEditTime: 2025-07-29 23:46:14
  * @FilePath: \negaihoshi\frontend\aii-home\src\components\index.tsx
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -13,11 +13,11 @@ import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 export const Navigation = () => {
   return (
     <motion.nav
-      initial={{ y: -20 }}
+      initial={{ y: -40 }}
       animate={{ y: 0 }}
       className="backdrop-glass px-6 py-4 border-b border-white/20"
     >
-      <div className="flex items-center justify-between max-w-6xl mx-auto">
+      <div className="flex items-center flex-row justify-between max-w-6xl mx-auto">
         {/* 左侧Logo */}
         <div className="flex items-center space-x-4">
           <Sparkles className="text-pink-400 w-8 h-8" />
@@ -27,7 +27,7 @@ export const Navigation = () => {
         </div>
 
         {/* 导航菜单 */}
-        <div className="hidden md:flex items-center space-x-8">
+        <div className="hidden md:flex flex-row items-center space-x-8">
           <NavLink icon={<Home />} label="首页" />
           <NavLink icon={<Pencil />} label="动态" />
           <NavLink icon={<Sparkles />} label="创作空间" />
