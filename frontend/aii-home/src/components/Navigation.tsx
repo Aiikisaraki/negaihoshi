@@ -2,7 +2,7 @@
  * @Author: Aiikisaraki morikawa@kimisui56.work
  * @Date: 2025-05-25 10:42:45
  * @LastEditors: Aii如樱如月 morikawa2021@163.com
- * @LastEditTime: 2025-07-29 23:46:14
+ * @LastEditTime: 2025-07-29 23:54:50
  * @FilePath: \negaihoshi\frontend\aii-home\src\components\index.tsx
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -17,7 +17,7 @@ export const Navigation = () => {
       animate={{ y: 0 }}
       className="backdrop-glass px-6 py-4 border-b border-white/20"
     >
-      <div className="flex items-center flex-row justify-between max-w-6xl mx-auto">
+      <div className="flex items-center justify-between max-w-6xl mx-auto">
         {/* 左侧Logo */}
         <div className="flex items-center space-x-4">
           <Sparkles className="text-pink-400 w-8 h-8" />
