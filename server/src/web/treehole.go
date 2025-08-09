@@ -56,19 +56,21 @@ func (t *TreeHoleHandler) CreateTreeHoleMessage(ctx *gin.Context) {
 	}
 
 	userId := userIdInterface.(int64)
-	treehole, err := t.svc.CreateTreeHoleMessage(ctx, domain.TreeHole{
+	treeholeData := domain.TreeHole{
 		Content: req.Content,
 		UserId:  userId,
-	})
+	}
+
+	err := t.svc.CreateTreeHoleMessage(ctx, treeholeData)
 	if err != nil {
 		SystemError(ctx)
 		return
 	}
 
 	SuccessResponse(ctx, map[string]interface{}{
-		"id":      treehole.Id,
-		"content": treehole.Content,
-		"ctime":   treehole.Ctime,
+		"content": req.Content,
+		"user_id": userId,
+		"message": "发布成功",
 	}, "发布成功")
 }
 

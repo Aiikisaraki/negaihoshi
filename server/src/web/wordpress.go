@@ -62,6 +62,7 @@ func (w *WordPressHandler) BindWordPressSite(ctx *gin.Context) {
 	SuccessResponse(ctx, map[string]interface{}{
 		"message": "WordPress站点绑定成功",
 		"site":    req.SiteURL,
+		"user_id": userId,
 	})
 }
 
