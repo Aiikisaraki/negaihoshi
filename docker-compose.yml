@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # MySQL 数据库
+  mysql:
+    image: mysql:8.0
+    container_name: negaihoshi-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: negaihoshi
+      MYSQL_USER: negaihoshi
+      MYSQL_PASSWORD: negaihoshi123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./server/config/init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    command: --default-authentication-plugin=mysql_native_password
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: negaihoshi-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  # 后端服务
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: negaihoshi-backend
+    ports:
+      - "9292:9292"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_USER=negaihoshi
+      - DB_PASSWORD=negaihoshi123
+      - DB_NAME=negaihoshi
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=
+    depends_on:
+      - mysql
+      - redis
+    restart: unless-stopped
+    volumes:
+      - ./server/config:/app/config
+
+  # 前端服务
+  frontend:
+    build:
+      context: ./frontend/aii-home
+      dockerfile: Dockerfile
+    container_name: negaihoshi-frontend
+    ports:
+      - "3000:80"
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  redis_data:

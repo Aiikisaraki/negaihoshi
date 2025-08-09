@@ -11,7 +11,17 @@ package config
 type Config struct {
 	FrontendPrefix []string `json:"frontend-prefix"`
 	ServerPort     string   `json:"server-port"`
-	Database       struct {
+	ApiDocs        struct {
+		Enabled     bool   `json:"enabled"`
+		Title       string `json:"title"`
+		Description string `json:"description"`
+		Version     string `json:"version"`
+		Contact     struct {
+			Name  string `json:"name"`
+			Email string `json:"email"`
+		} `json:"contact"`
+	} `json:"api-docs"`
+	Database struct {
 		Type         string `json:"type"`
 		Host         string `json:"host"`
 		Port         string `json:"port"`
@@ -23,5 +33,5 @@ type Config struct {
 		Host     string `json:"host"`
 		Port     string `json:"port"`
 		Password string `json:"password"`
-	}
+	} `json:"redis"`
 }

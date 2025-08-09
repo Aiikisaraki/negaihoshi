@@ -71,3 +71,23 @@ func (c *ConfigFunction) GetFrontendPrefix() []string {
 	}
 	return c.Config.FrontendPrefix
 }
+
+func (c *ConfigFunction) GetApiDocsConfig() (bool, string, string, string, string, string) {
+	if IsZero(c.Config) {
+		fmt.Println("config 未被赋值")
+		return false, "", "", "", "", ""
+	}
+	return c.Config.ApiDocs.Enabled,
+		c.Config.ApiDocs.Title,
+		c.Config.ApiDocs.Description,
+		c.Config.ApiDocs.Version,
+		c.Config.ApiDocs.Contact.Name,
+		c.Config.ApiDocs.Contact.Email
+}
+
+func (c *ConfigFunction) IsApiDocsEnabled() bool {
+	if IsZero(c.Config) {
+		return false
+	}
+	return c.Config.ApiDocs.Enabled
+}

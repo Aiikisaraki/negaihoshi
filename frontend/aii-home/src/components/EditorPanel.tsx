@@ -1,9 +1,53 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-// import { Sparkles, PaperClip } from 'heroicons-react';
+import { treeholeApi } from '../requests/posts';
 
-export const EditorPanel = () => {
+interface EditorPanelProps {
+  onPostSuccess?: () => void;
+}
+
+export const EditorPanel = ({ onPostSuccess }: EditorPanelProps) => {
   const [content, setContent] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!content.trim()) {
+      setError('请输入内容');
+      return;
+    }
+
+    if (content.length > 1000) {
+      setError('内容不能超过1000字符');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const response = await treeholeApi.create(content.trim());
+      
+      if (response.code === 200) {
+        setContent(''); // 清空输入框
+        onPostSuccess?.(); // 通知父组件刷新列表
+      } else {
+        setError(response.message || '发布失败');
+      }
+    } catch (err) {
+      setError('网络错误，请检查登录状态');
+      console.error('发布失败:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
 
   return (
     <motion.div
@@ -11,32 +55,46 @@ export const EditorPanel = () => {
       animate={{ scale: 1 }}
       className="space-y-4"
     >
-      <div className="flex space-x-2">
-        {/* <button className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition">
-          <Sparkles className="w-5 h-5 text-blue-300" />
-        </button>
-        <button className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition">
-          <Paperclip className="w-5 h-5 text-pink-300" />
-        </button> */}
+      <div className="flex justify-between items-center">
+        <div className="flex space-x-2">
+          {/* 功能按钮预留位置 */}
+        </div>
+        <div className="text-xs text-white/50">
+          {content.length}/1000 字符 • Ctrl+Enter 快速发布
+        </div>
       </div>
+      
+      {error && (
+        <div className="p-3 rounded-lg bg-red-500/20 border border-red-500/30 text-red-200 text-sm">
+          {error}
+        </div>
+      )}
       
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
+        onKeyDown={handleKeyDown}
+        disabled={isLoading}
         className="w-full h-32 p-4 rounded-xl bg-white/10 backdrop-blur-sm 
                  border border-white/20 focus:border-pink-300/50 
                  text-white placeholder-white/50 
-                 focus:outline-none focus:ring-2 focus:ring-pink-300/30"
-        placeholder="分享你的心情..."
+                 focus:outline-none focus:ring-2 focus:ring-pink-300/30
+                 disabled:opacity-50 disabled:cursor-not-allowed resize-none"
+        placeholder="分享你的心情... (支持 Ctrl+Enter 快速发布)"
       />
       
-      <button
-        className="px-6 py-2 bg-gradient-to-r from-pink-400 to-blue-400 
-                 rounded-full text-white font-medium hover:opacity-90 
-                 transition-opacity float-right"
-      >
-        发布动态
-      </button>
+      <div className="flex justify-end">
+        <button
+          onClick={handleSubmit}
+          disabled={isLoading || !content.trim()}
+          className="px-6 py-2 bg-gradient-to-r from-pink-400 to-blue-400 
+                   rounded-full text-white font-medium 
+                   hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed
+                   transition-all duration-200"
+        >
+          {isLoading ? '发布中...' : '发布动态'}
+        </button>
+      </div>
     </motion.div>
   );
 };

@@ -22,7 +22,6 @@ import (
 	"negaihoshi/server/src/web/middleware"
 
 	// "io"
-	"net/http"
 	"strings"
 	"time"
 
@@ -57,13 +56,15 @@ func main() {
 	u := initUser(db, redisClient)
 	t := initTreeHole(db)
 	s := initPersonalTextStatus(db)
+	apiDocs := initAPIDocsHandler(&serverConfig)
 	r := initWebServer(&serverConfig)
+
+	// 注册路由
 	u.RegisterUserRoutes(r)
 	t.RegisterTreeHoleRoutes(r)
 	s.RegisterStatusAndPostsRoutes(r)
-	r.GET("/", func(c *gin.Context) {
-		c.String(http.StatusOK, "Hi, this is Aii's Private API~")
-	})
+	apiDocs.RegisterAPIDocsRoutes(r)
+
 	r.Static("/assets", "./assets")
 	r.StaticFile("/favicon.ico", "./assets/favicon.ico")
 	serverPort := serverConfig.GetServerPort()
@@ -164,4 +165,8 @@ func initRedis(config *config.ConfigFunction) *redis.Client {
 	}
 	fmt.Println("成功连接redis")
 	return rdb
+}
+
+func initAPIDocsHandler(config *config.ConfigFunction) *web.APIDocsHandler {
+	return web.NewAPIDocsHandler(config)
 }

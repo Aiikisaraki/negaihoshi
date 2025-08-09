@@ -39,41 +39,65 @@ func (t *TreeHoleHandler) RegisterTreeHoleRoutes(server *gin.Engine) {
 
 func (t *TreeHoleHandler) CreateTreeHoleMessage(ctx *gin.Context) {
 	type TreeHoleMessageReq struct {
-		Content string `json:"content"`
+		Content string `json:"content" binding:"required,min=1,max=1000"`
 	}
+
 	var req TreeHoleMessageReq
-	if err := ctx.Bind(&req); err != nil {
-		ctx.String(http.StatusOK, "系统错误")
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ValidationError(ctx, "内容不能为空且不超过1000字符")
 		return
 	}
+
 	sess := sessions.Default(ctx)
-	userId := sess.Get("userId").(int64)
-	err := t.svc.CreateTreeHoleMessage(ctx, domain.TreeHole{
+	userIdInterface := sess.Get("userId")
+	if userIdInterface == nil {
+		UnauthorizedError(ctx)
+		return
+	}
+
+	userId := userIdInterface.(int64)
+	treehole, err := t.svc.CreateTreeHoleMessage(ctx, domain.TreeHole{
 		Content: req.Content,
 		UserId:  userId,
 	})
 	if err != nil {
-		ctx.String(http.StatusOK, "系统错误")
+		SystemError(ctx)
 		return
 	}
-	ctx.String(http.StatusOK, "添加成功")
+
+	SuccessResponse(ctx, map[string]interface{}{
+		"id":      treehole.Id,
+		"content": treehole.Content,
+		"ctime":   treehole.Ctime,
+	}, "发布成功")
 }
 
 func (t *TreeHoleHandler) GetTreeHoleMessageList(ctx *gin.Context) {
-	type TreeHoleMessageListReq struct {
-		PageNum  int `json:"pageNum"`
-		PageSize int `json:"pageSize"`
+	// 使用URL参数而不是JSON body进行分页查询
+	pageNumStr := ctx.DefaultQuery("page", "1")
+	pageSizeStr := ctx.DefaultQuery("size", "10")
+
+	pageNum := 1
+	pageSize := 10
+
+	if num, err := strconv.Atoi(pageNumStr); err == nil && num > 0 {
+		pageNum = num
 	}
-	var req TreeHoleMessageListReq
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		return
+	if size, err := strconv.Atoi(pageSizeStr); err == nil && size > 0 && size <= 50 {
+		pageSize = size
 	}
-	mess, err := t.svc.GetTreeHoleMessageList(ctx, req.PageNum, req.PageSize)
+
+	messages, err := t.svc.GetTreeHoleMessageList(ctx, pageNum, pageSize)
 	if err != nil {
-		ctx.String(http.StatusOK, "系统错误")
+		SystemError(ctx)
 		return
 	}
-	ctx.JSON(http.StatusOK, mess)
+
+	SuccessResponse(ctx, map[string]interface{}{
+		"messages": messages,
+		"page":     pageNum,
+		"size":     pageSize,
+	})
 }
 
 func (t *TreeHoleHandler) GetUserTreeHoleMessageList(ctx *gin.Context) {
