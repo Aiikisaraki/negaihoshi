@@ -1,8 +1,8 @@
 /*
  * @Author: Aiikisaraki morikawa@kimisui56.work
  * @Date: 2025-05-25 10:45:45
- * @LastEditors: Aiikisaraki morikawa@kimisui56.work
- * @LastEditTime: 2025-05-25 10:49:08
+ * @LastEditors: Aii如樱如月 morikawa@kimisui56.work
+ * @LastEditTime: 2025-08-06 21:37:38
  * @FilePath: \negaihoshi\frontend\aii-home\src\components\Timeline.tsx
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -10,11 +10,8 @@ import { motion } from 'framer-motion';
 // import { Clock } from 'heroicons-react';
 
 export const Timeline = () => {
-  const posts = [
-    { id: 1, user: '星野梦美', content: '今天的星空特别美呢～', time: '15:30' },
-    { id: 2, user: '雾雨魔理沙', content: '发现新的魔法材料啦！', time: '14:45' },
-  ];
-
+  const posts: { id: number; user: string; content: string; time: string }[] = [];
+  
   return (
     <div className="space-y-4">
       {posts.map((post) => (
