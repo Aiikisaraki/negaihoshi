@@ -1,0 +1,84 @@
+{
+  "site": {
+    "name": "树洞系统",
+    "description": "一个匿名分享心情的平台",
+    "version": "1.0.0",
+    "author": "Negaihoshi Team",
+    "contact": {
+      "email": "admin@negaihoshi.com",
+      "website": "https://negaihoshi.com"
+    }
+  },
+  "server": {
+    "port": 9292,
+    "host": "0.0.0.0",
+    "debug": false,
+    "cors": {
+      "enabled": true,
+      "origins": ["http://localhost:3000", "http://localhost:3001", "http://localhost:5173"]
+    },
+    "session": {
+      "secret": "your-session-secret-key",
+      "max_age": 86400
+    }
+  },
+  "database": {
+    "driver": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "username": "root",
+    "password": "password",
+    "database": "negaihoshi",
+    "charset": "utf8mb4",
+    "max_idle_conns": 10,
+    "max_open_conns": 100
+  },
+  "redis": {
+    "host": "localhost",
+    "port": 6379,
+    "password": "",
+    "database": 0,
+    "pool_size": 10
+  },
+  "frontend": {
+    "main": {
+      "enabled": true,
+      "port": 3000,
+      "build_dir": "frontend/aii-home/dist"
+    },
+    "admin": {
+      "enabled": true,
+      "port": 3001,
+      "build_dir": "frontend/admin/dist"
+    }
+  },
+  "features": {
+    "user_registration": true,
+    "content_review": false,
+    "api_docs": true,
+    "admin_panel": true,
+    "wordpress_integration": true
+  },
+  "limits": {
+    "max_post_length": 1000,
+    "max_username_length": 50,
+    "max_email_length": 100,
+    "rate_limit": {
+      "requests_per_minute": 60,
+      "burst": 10
+    }
+  },
+  "logging": {
+    "level": "info",
+    "file": "logs/app.log",
+    "max_size": 100,
+    "max_backups": 3,
+    "max_age": 28
+  },
+  "security": {
+    "password_min_length": 8,
+    "require_special_chars": true,
+    "jwt_secret": "your-jwt-secret-key",
+    "bcrypt_cost": 12
+  }
+}

@@ -76,8 +76,16 @@ func main() {
 func initConfig() (config.ConfigFunction, error) {
 	configPath := "config/config.json"
 	serverConfig := config.ConfigFunction{}
+
+	// 尝试读取配置文件，如果不存在会自动生成
 	err := serverConfig.ReadConfiguration(configPath)
-	return serverConfig, err
+	if err != nil {
+		fmt.Printf("配置初始化失败: %v\n", err)
+		fmt.Println("请检查配置文件或确保项目根目录存在config.json文件")
+		return serverConfig, err
+	}
+
+	return serverConfig, nil
 }
 
 func initWebServer(config *config.ConfigFunction) *gin.Engine {

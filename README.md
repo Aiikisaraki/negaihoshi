@@ -1,199 +1,359 @@
-# 🌟 Negaihoshi (愿い星) - 星空树洞
+# Negaihoshi 树洞系统
 
-> 一个现代化的匿名树洞系统，支持WordPress集成，让你在星空下分享心情与想法。
-
-![技术栈](https://img.shields.io/badge/Go-1.21-blue)
-![React](https://img.shields.io/badge/React-18-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)
-![Docker](https://img.shields.io/badge/Docker-ready-green)
-
-## ✨ 特性
-
-- 🌙 **匿名树洞** - 安全的匿名分享空间
-- 🎨 **现代UI** - 基于玻璃拟态设计的现代界面
-- 📱 **响应式设计** - 完美适配桌面和移动设备
-- 🔗 **WordPress集成** - 支持绑定WordPress站点并转发内容
-- 🚀 **实时更新** - 动态内容实时刷新
-- 🐳 **容器化部署** - 一键Docker部署
-- 🔐 **用户认证** - 完整的用户注册登录系统
-
-## 🏗️ 技术架构
-
-### 后端
-- **Go 1.21** + **Gin** - 高性能Web框架
-- **MySQL 8.0** - 主数据库
-- **Redis** - 缓存和会话存储
-- **GORM** - ORM框架
-- **JWT** - 用户认证
-
-### 前端
-- **React 18** + **TypeScript** - 现代前端框架
-- **Vite** - 构建工具
-- **Tailwind CSS** - 原子化CSS框架
-- **Framer Motion** - 动画库
-- **Axios** - HTTP客户端
+一个基于 Go + React 的匿名分享心情平台，支持用户注册、内容发布、管理员后台等功能。
 
 ## 🚀 快速开始
 
-### 环境要求
+### 方式一：脚本启动 (推荐)
 
-- Docker & Docker Compose
-- Go 1.21+ (开发模式)
-- Node.js 18+ (开发模式)
-
-### 生产部署
-
+#### Linux/macOS
 ```bash
-# 克隆项目
-git clone <repository-url>
-cd negaihoshi
-
-# 一键启动
+# 给脚本执行权限
 chmod +x scripts/start.sh
+
+# 启动所有服务
 ./scripts/start.sh
+
+# 或者指定命令
+./scripts/start.sh start      # 启动所有服务
+./scripts/start.sh stop       # 停止所有服务
+./scripts/start.sh restart    # 重启所有服务
+./scripts/start.sh status     # 查看服务状态
+./scripts/start.sh install    # 安装前端依赖
 ```
 
-访问 http://localhost:3000 即可使用！
+#### Windows
+```cmd
+# 启动所有服务
+scripts\start.bat
 
-### 开发模式
+# 或者指定命令
+scripts\start.bat start       # 启动所有服务
+scripts\start.bat stop        # 停止所有服务
+scripts\start.bat restart     # 重启所有服务
+scripts\start.bat status      # 查看服务状态
+scripts\start.bat install     # 安装前端依赖
+```
+
+### 方式二：Docker 启动
 
 ```bash
-# 启动开发环境
-chmod +x scripts/dev.sh
-./scripts/dev.sh
+# 给脚本执行权限
+chmod +x scripts/docker-start.sh
+
+# 启动所有服务
+./scripts/docker-start.sh
+
+# 或者指定命令
+./scripts/docker-start.sh start     # 启动所有服务
+./scripts/docker-start.sh stop      # 停止所有服务
+./scripts/docker-start.sh restart   # 重启所有服务
+./scripts/docker-start.sh status    # 查看服务状态
+./scripts/docker-start.sh logs      # 查看日志
+./scripts/docker-start.sh cleanup   # 清理资源
 ```
 
-开发服务将运行在：
-- 前端: http://localhost:5173
-- 后端: http://localhost:9292
+### 方式三：手动启动
 
-## 📖 功能模块
-
-### 🧑‍💻 用户系统
-- 用户注册/登录/登出
-- 会话管理
-- 权限控制
-
-### 🌙 树洞功能
-- 匿名发布想法和心情
-- 实时浏览他人分享
-- 分页加载优化
-- 字符数限制（1000字符）
-
-### 🔗 WordPress集成
-- 绑定多个WordPress站点
-- 应用密码认证
-- 内容一键转发
-- 转发状态追踪
-
-### 🎨 用户界面
-- 玻璃拟态设计风格
-- 流畅的动画效果
-- 深色主题
-- 响应式布局
-
-## 📚 API文档
-
-### 树洞API
-```http
-POST /api/treehole/create      # 创建树洞消息
-GET  /api/treehole/list        # 获取树洞列表
-GET  /api/treehole/:id         # 获取单个树洞
-DELETE /api/treehole/:id       # 删除树洞消息
+1. **启动后端服务**
+```bash
+cd server
+go run main.go
 ```
 
-### 用户API
-```http
-POST /api/users/signup         # 用户注册
-POST /api/users/login          # 用户登录
-POST /api/users/logout         # 用户登出
+2. **启动主前端服务**
+```bash
+cd frontend/aii-home
+npm install
+npm run dev
 ```
 
-### WordPress API
-```http
-POST /api/wordpress/bind       # 绑定WordPress站点
-GET  /api/wordpress/sites      # 获取绑定站点
-DELETE /api/wordpress/sites/:id # 解绑站点
-POST /api/wordpress/transfer   # 转发内容
+3. **启动管理员前端服务** (可选)
+```bash
+cd frontend/admin
+npm install
+npm run dev
 ```
 
-## 🛠️ 配置说明
+## 📋 系统要求
 
-### 数据库配置
+### 脚本启动方式
+- Go 1.19+
+- Node.js 16+
+- MySQL 8.0+
+- Redis 6.0+
+- Python 3.6+ (用于配置解析)
 
-复制 `server/config/config-sample.json` 为 `server/config/config.json` 并配置：
+### Docker 启动方式
+- Docker 20.10+
+- Docker Compose 2.0+
 
+## ⚙️ 配置说明
+
+### 自动配置文件生成
+
+系统支持自动生成配置文件功能：
+
+1. **首次启动**: 如果配置文件不存在，系统会自动生成默认配置文件
+2. **手动生成**: 使用配置生成工具手动生成配置文件
+3. **全局配置**: 系统使用 `config.json` 作为全局配置文件，自动生成后端配置
+
+### 手动生成配置文件
+
+```bash
+# 进入后端目录
+cd server
+
+# 生成默认配置文件
+go run cmd/config-generator/main.go
+
+# 指定配置文件路径
+go run cmd/config-generator/main.go -global ../config.json -backend config/config.json
+
+# 强制重新生成
+go run cmd/config-generator/main.go -force
+
+# 查看帮助
+go run cmd/config-generator/main.go -help
+```
+
+### 配置文件结构
+
+系统使用 `config.json` 作为全局配置文件，包含以下配置项：
+
+### 站点配置
 ```json
 {
-  "database": {
-    "host": "localhost",
-    "port": "3306",
-    "user": "negaihoshi",
-    "password": "your_password",
-    "database": "negaihoshi"
-  },
-  "redis": {
-    "host": "localhost",
-    "port": "6379",
-    "password": ""
-  },
-  "server": {
-    "port": "9292"
-  },
-  "frontend": {
-    "prefix": ["http://localhost:3000"]
+  "site": {
+    "name": "树洞系统",
+    "description": "一个匿名分享心情的平台",
+    "version": "1.0.0"
   }
 }
 ```
 
-## 🐳 Docker部署
-
-项目提供完整的Docker配置：
-
-```yaml
-# docker-compose.yml 包含：
-- MySQL 8.0 数据库
-- Redis 缓存
-- Go 后端服务
-- React 前端服务
-- Nginx 反向代理
+### 服务配置
+```json
+{
+  "server": {
+    "port": 9292,
+    "host": "0.0.0.0",
+    "debug": false
+  }
+}
 ```
 
-## 🔧 开发指南
+### 数据库配置
+```json
+{
+  "database": {
+    "driver": "mysql",
+    "host": "localhost",
+    "port": 3306,
+    "username": "root",
+    "password": "password",
+    "database": "negaihoshi"
+  }
+}
+```
 
-### 添加新功能
+### 前端配置
+```json
+{
+  "frontend": {
+    "main": {
+      "enabled": true,
+      "port": 3000
+    },
+    "admin": {
+      "enabled": true,
+      "port": 3001
+    }
+  }
+}
+```
 
-1. **后端添加API**
-   ```go
-   // 在 server/src/web/ 添加handler
-   // 在 server/src/service/ 添加业务逻辑
-   // 在 server/src/repository/ 添加数据层
-   ```
+### 功能开关
+```json
+{
+  "features": {
+    "user_registration": true,
+    "content_review": false,
+    "api_docs": true,
+    "admin_panel": true,
+    "wordpress_integration": true
+  }
+}
+```
 
-2. **前端添加页面**
-   ```typescript
-   // 在 frontend/aii-home/src/components/ 添加组件
-   // 在 frontend/aii-home/src/requests/ 添加API调用
-   ```
+## 🌐 访问地址
 
-### 代码规范
+启动成功后，可以通过以下地址访问：
 
-- 后端遵循Go标准命名规范
-- 前端使用TypeScript严格模式
-- 统一使用Prettier格式化代码
+- **主前端**: http://localhost:3000
+- **管理员前端**: http://localhost:3001 (如果启用)
+- **后端API**: http://localhost:9292
+- **API文档**: http://localhost:9292/api/docs
+- **MySQL**: localhost:3306
+- **Redis**: localhost:6379
 
-## 🤝 贡献
+## 🔧 管理命令
 
-欢迎提交Issue和Pull Request来改进项目！
+### 脚本启动方式
+```bash
+# 查看所有可用命令
+./scripts/start.sh
+
+# 单独启动服务
+./scripts/start.sh backend        # 仅启动后端
+./scripts/start.sh main-frontend  # 仅启动主前端
+./scripts/start.sh admin-frontend # 仅启动管理员前端
+```
+
+### Docker 启动方式
+```bash
+# 查看所有可用命令
+./scripts/docker-start.sh
+
+# 单独启动服务
+./scripts/docker-start.sh backend  # 仅启动后端
+./scripts/docker-start.sh frontend # 仅启动前端
+
+# 查看日志
+./scripts/docker-start.sh logs backend    # 查看后端日志
+./scripts/docker-start.sh logs frontend   # 查看前端日志
+```
+
+## 📁 项目结构
+
+```
+negaihoshi/
+├── config.json                 # 全局配置文件
+├── docker-compose.yml          # Docker Compose配置
+├── scripts/                    # 启动脚本
+│   ├── start.sh               # Linux/macOS启动脚本
+│   ├── start.bat              # Windows启动脚本
+│   ├── docker-start.sh        # Docker启动脚本
+│   └── init.sql               # 数据库初始化脚本
+├── server/                     # 后端服务
+│   ├── main.go                # 主入口文件
+│   ├── src/                   # 源代码
+│   │   ├── domain/            # 数据模型
+│   │   ├── repository/        # 数据访问层
+│   │   ├── service/           # 业务逻辑层
+│   │   ├── web/               # Web处理器
+│   │   └── util/              # 工具函数
+│   └── config/                # 后端配置
+├── frontend/                   # 前端项目
+│   ├── aii-home/              # 主前端
+│   └── admin/                 # 管理员前端
+├── logs/                       # 日志目录
+├── pids/                       # 进程ID文件
+└── doc/                        # 文档
+    └── changelog/              # 更新日志
+```
+
+## 🔐 默认账户
+
+系统初始化时会创建默认管理员账户：
+
+- **邮箱**: admin@negaihoshi.com
+- **用户名**: admin
+- **密码**: admin123
+- **角色**: 管理员
+
+## 🛠️ 开发指南
+
+### 后端开发
+```bash
+cd server
+go mod tidy
+go run main.go
+```
+
+### 前端开发
+```bash
+# 主前端
+cd frontend/aii-home
+npm install
+npm run dev
+
+# 管理员前端
+cd frontend/admin
+npm install
+npm run dev
+```
+
+### 数据库迁移
+```bash
+# 使用初始化脚本
+mysql -u root -p negaihoshi < scripts/init.sql
+```
+
+## 📝 更新日志
+
+详细的更新记录请查看 [doc/changelog/](doc/changelog/) 目录。
+
+## 🤝 贡献指南
+
+1. Fork 项目
+2. 创建功能分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开 Pull Request
 
 ## 📄 许可证
 
-本项目基于 MIT 许可证开源。
+本项目采用 MIT 许可证 - 查看 [LICENSE](LICENSE) 文件了解详情。
 
-## 🙏 鸣谢
+## 🆘 常见问题
 
-感谢所有为开源社区做出贡献的开发者们。
+### Q: 如何禁用管理员前端？
+A: 在 `config.json` 中将 `frontend.admin.enabled` 设置为 `false`。
 
----
+### Q: 如何修改数据库配置？
+A: 编辑 `config.json` 中的 `database` 部分。
 
-⭐ 如果这个项目对你有帮助，请给它一个星标！
+### Q: 如何查看服务日志？
+A: 
+- 脚本启动: 查看 `logs/` 目录下的日志文件
+- Docker启动: 使用 `./scripts/docker-start.sh logs [service]`
+
+### Q: 如何备份数据？
+A: 
+```bash
+# 备份MySQL数据
+mysqldump -u root -p negaihoshi > backup.sql
+
+# 备份Redis数据
+redis-cli BGSAVE
+```
+
+### Q: 配置文件不存在怎么办？
+A: 系统支持自动生成配置文件：
+
+1. **自动生成**: 首次启动时系统会自动生成默认配置文件
+2. **手动生成**: 使用配置生成工具
+   ```bash
+   cd server
+   go run cmd/config-generator/main.go
+   ```
+3. **自定义配置**: 编辑生成的 `config.json` 文件，然后重新生成后端配置
+
+### Q: 如何修改配置后重新生成后端配置？
+A: 
+
+```bash
+# 编辑全局配置文件
+vim config.json
+
+# 重新生成后端配置
+cd server
+go run cmd/config-generator/main.go -force
+```
+
+## 📞 联系方式
+
+- 项目主页: https://github.com/your-username/negaihoshi
+- 问题反馈: https://github.com/your-username/negaihoshi/issues
+- 邮箱: admin@negaihoshi.com
