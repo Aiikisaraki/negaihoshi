@@ -68,3 +68,56 @@ func (s *StatusAndPostsService) DeletePosts(c *gin.Context, id int64) error {
 	err := s.repo.DeletePosts(c, id)
 	return err
 }
+
+// 管理后台相关方法
+
+// 获取系统统计信息
+func (s *StatusAndPostsService) GetSystemStats() (map[string]interface{}, error) {
+	// 暂时返回示例数据
+	return map[string]interface{}{
+		"total_status":    850,
+		"total_posts":     320,
+		"system_uptime":   "15天 8小时 30分钟",
+		"memory_usage":    "65%",
+		"disk_usage":      "45%",
+		"cpu_usage":       "23%",
+		"active_sessions": 45,
+	}, nil
+}
+
+// 获取动态列表（管理后台）
+func (s *StatusAndPostsService) GetStatusListForAdmin(page, size int, status string) ([]domain.Status, int64, error) {
+	// 暂时返回示例数据
+	statuses := []domain.Status{
+		{
+			Id:      1,
+			Content: "这是一条测试动态",
+			UserId:  1,
+		},
+		{
+			Id:      2,
+			Content: "另一条测试动态",
+			UserId:  2,
+		},
+	}
+
+	return statuses, int64(len(statuses)), nil
+}
+
+// 删除动态（管理后台）
+func (s *StatusAndPostsService) DeleteStatusForAdmin(statusID int64) error {
+	// 暂时返回nil，实际实现时需要删除数据库记录
+	return nil
+}
+
+// 审核通过动态
+func (s *StatusAndPostsService) ApproveStatus(statusID int64) error {
+	// 暂时返回nil，实际实现时需要更新状态
+	return nil
+}
+
+// 审核拒绝动态
+func (s *StatusAndPostsService) RejectStatus(statusID int64, reason string) error {
+	// 暂时返回nil，实际实现时需要更新状态
+	return nil
+}

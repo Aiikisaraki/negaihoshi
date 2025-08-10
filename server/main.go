@@ -53,10 +53,11 @@ func main() {
 
 	db := initDB(&serverConfig)
 	redisClient := initRedis(&serverConfig)
-	u := initUser(db, redisClient)
-	t := initTreeHole(db)
-	s := initPersonalTextStatus(db)
+	u, userService := initUser(db, redisClient)
+	t, treeholeService := initTreeHole(db)
+	s, statusService := initPersonalTextStatus(db)
 	apiDocs := initAPIDocsHandler(&serverConfig)
+	admin := initAdminHandler(userService, treeholeService, statusService)
 	r := initWebServer(&serverConfig)
 
 	// 注册路由
@@ -64,6 +65,7 @@ func main() {
 	t.RegisterTreeHoleRoutes(r)
 	s.RegisterStatusAndPostsRoutes(r)
 	apiDocs.RegisterAPIDocsRoutes(r)
+	admin.RegisterAdminRoutes(r)
 
 	r.Static("/assets", "./assets")
 	r.StaticFile("/favicon.ico", "./assets/favicon.ico")
@@ -104,6 +106,8 @@ func initWebServer(config *config.ConfigFunction) *gin.Engine {
 		IgnorePaths("/api/docs").
 		IgnorePaths("/api/test").
 		IgnorePaths("/api/test/execute").
+		IgnorePaths("/admin").
+		IgnorePaths("/admin/*").
 		Build())
 	return r
 }
@@ -131,27 +135,27 @@ func initDB(config *config.ConfigFunction) *gorm.DB {
 	return db
 }
 
-func initUser(db *gorm.DB, rc *redis.Client) *web.UserHandler {
+func initUser(db *gorm.DB, rc *redis.Client) (*web.UserHandler, *service.UserService) {
 	ud := dao.NewUserDAO(db)
 	wpud := dao.NewUserWordpressInfoDAO(db)
 	repo := repository.NewUserRepository(ud, wpud, rc)
 	svc := service.NewUserService(repo)
-	return web.NewUserHandler(svc)
+	return web.NewUserHandler(svc), svc
 }
 
-func initTreeHole(db *gorm.DB) *web.TreeHoleHandler {
+func initTreeHole(db *gorm.DB) (*web.TreeHoleHandler, *service.TreeHoleService) {
 	td := dao.NewTreeHoleDAO(db)
 	repo := repository.NewTreeHoleRepository(td)
 	svc := service.NewTreeHoleService(repo)
-	return web.NewTreeHoleHandler(svc)
+	return web.NewTreeHoleHandler(svc), svc
 }
 
-func initPersonalTextStatus(db *gorm.DB) *web.StatusAndPostsHandler {
+func initPersonalTextStatus(db *gorm.DB) (*web.StatusAndPostsHandler, *service.StatusAndPostsService) {
 	sd := dao.NewStatusDAO(db)
 	pd := dao.NewPostsDAO(db)
 	repo := repository.NewStatusAndPostsRepository(sd, pd)
 	svc := service.NewStatusAndPostsService(repo)
-	return web.NewStatusAndPostsHandler(svc)
+	return web.NewStatusAndPostsHandler(svc), svc
 }
 
 func initRedis(config *config.ConfigFunction) *redis.Client {
@@ -172,4 +176,8 @@ func initRedis(config *config.ConfigFunction) *redis.Client {
 
 func initAPIDocsHandler(config *config.ConfigFunction) *web.APIDocsHandler {
 	return web.NewAPIDocsHandler(config)
+}
+
+func initAdminHandler(userService *service.UserService, treeholeService *service.TreeHoleService, statusService *service.StatusAndPostsService) *web.AdminHandler {
+	return web.NewAdminHandler(userService, treeholeService, statusService)
 }

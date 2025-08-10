@@ -11,6 +11,7 @@ package service
 import (
 	"negaihoshi/server/src/domain"
 	"negaihoshi/server/src/repository"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -48,4 +49,56 @@ func (t *TreeHoleService) GetTreeHoleMessage(ctx *gin.Context, id int64) (domain
 
 func (t *TreeHoleService) DeleteTreeHoleMessage(ctx *gin.Context, id int64) error {
 	return t.repo.Delete(ctx, id)
+}
+
+// 管理后台相关方法
+
+// 获取内容统计信息
+func (t *TreeHoleService) GetContentStats() (map[string]interface{}, error) {
+	// 暂时返回示例数据
+	return map[string]interface{}{
+		"total_treeholes":   1250,
+		"pending_review":    15,
+		"approved_content":  1200,
+		"rejected_content":  35,
+		"new_content_today": 25,
+		"new_content_week":  180,
+	}, nil
+}
+
+// 获取树洞列表（管理后台）
+func (t *TreeHoleService) GetTreeholeListForAdmin(page, size int, status string) ([]domain.TreeHole, int64, error) {
+	// 暂时返回示例数据
+	treeholes := []domain.TreeHole{
+		{
+			Id:      1,
+			Content: "这是一条测试树洞消息",
+			Ctime:   time.Now().Add(-time.Hour),
+		},
+		{
+			Id:      2,
+			Content: "另一条测试消息",
+			Ctime:   time.Now().Add(-2 * time.Hour),
+		},
+	}
+
+	return treeholes, int64(len(treeholes)), nil
+}
+
+// 删除树洞（管理后台）
+func (t *TreeHoleService) DeleteTreeholeForAdmin(treeholeID int64) error {
+	// 暂时返回nil，实际实现时需要删除数据库记录
+	return nil
+}
+
+// 审核通过树洞
+func (t *TreeHoleService) ApproveTreehole(treeholeID int64) error {
+	// 暂时返回nil，实际实现时需要更新状态
+	return nil
+}
+
+// 审核拒绝树洞
+func (t *TreeHoleService) RejectTreehole(treeholeID int64, reason string) error {
+	// 暂时返回nil，实际实现时需要更新状态
+	return nil
 }
