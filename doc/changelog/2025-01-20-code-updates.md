@@ -211,6 +211,64 @@ r.Use(middleware.NewLoginMiddlewareBuilder().
 - 保持现有登录验证逻辑不变
 - 不影响其他需要登录的功能模块
 
+### 5. API文档界面美化
+
+**文件**: `server/src/web/apidocs.go`
+
+#### 变更类型
+🎨 **界面优化** - 将API文档从JSON格式改为美观的HTML界面
+
+#### 主要改动
+
+##### 文档响应格式变更
+```diff
+- ctx.JSON(http.StatusOK, docs)
++ ctx.Header("Content-Type", "text/html; charset=utf-8")
++ ctx.String(http.StatusOK, html)
+```
+
+**改进说明**:
+- ✅ 将API文档从JSON格式改为HTML格式
+- ✅ 提供美观的排版和样式设计
+- ✅ 支持标签筛选功能
+- ✅ 响应式设计，支持移动端访问
+
+##### 新增HTML生成方法
+```go
+// 生成单个API部分的HTML
+func (a *APIDocsHandler) generateAPISection(api APIEndpoint) string
+```
+
+**功能特性**:
+- 📋 **参数展示**: 清晰显示API参数信息，包括类型、位置、描述等
+- 📤 **请求体展示**: 展示请求体格式和示例
+- 📥 **响应展示**: 显示响应状态码和示例数据
+- 🏷️ **标签分类**: 支持按功能模块筛选API接口
+- 🎨 **美观样式**: 现代化的渐变背景和卡片式设计
+
+##### 界面设计特点
+- 🌈 **渐变背景**: 使用蓝紫色渐变背景，视觉效果优雅
+- 🎯 **卡片布局**: 每个API接口使用独立卡片展示
+- 🔍 **筛选功能**: 支持按标签筛选不同类型的API
+- 📱 **响应式**: 适配不同屏幕尺寸
+- 🎭 **交互效果**: 悬停动画和过渡效果
+
+##### 导入包优化
+```diff
+import (
++	"encoding/json"
+	"negaihoshi/server/config"
+	"net/http"
++	"strings"
+	"github.com/gin-gonic/gin"
+)
+```
+
+**改进说明**:
+- ✅ 添加 `encoding/json` 包用于JSON格式化
+- ✅ 添加 `strings` 包用于字符串操作
+- ✅ 支持HTML模板生成和字符串拼接
+
 ## 📝 开发注意事项
 
 ### Go代码规范

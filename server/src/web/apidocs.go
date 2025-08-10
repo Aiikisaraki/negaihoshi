@@ -6,8 +6,10 @@
 package web
 
 import (
+	"encoding/json"
 	"negaihoshi/server/config"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -220,35 +222,376 @@ func (a *APIDocsHandler) ShowHomePage(ctx *gin.Context) {
 // 获取API文档数据
 func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
 	if !a.config.IsApiDocsEnabled() {
-		ctx.JSON(http.StatusForbidden, gin.H{"error": "API文档功能未启用"})
+		ctx.String(http.StatusForbidden, "API文档功能未启用")
 		return
 	}
 
 	apis := a.getAPIEndpoints()
-	enabled, title, description, version, contactName, contactEmail := a.config.GetApiDocsConfig()
+	_, title, description, version, contactName, contactEmail := a.config.GetApiDocsConfig()
 
-	docs := gin.H{
-		"info": gin.H{
-			"title":       title,
-			"description": description,
-			"version":     version,
-			"contact": gin.H{
-				"name":  contactName,
-				"email": contactEmail,
-			},
-		},
-		"enabled":   enabled,
-		"base_url":  "http://localhost:9292",
-		"endpoints": apis,
-		"tags": []gin.H{
-			{"name": "auth", "description": "用户认证相关接口"},
-			{"name": "treehole", "description": "树洞功能相关接口"},
-			{"name": "wordpress", "description": "WordPress集成相关接口"},
-			{"name": "system", "description": "系统功能相关接口"},
-		},
+	html := `<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>` + title + ` - API文档</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: white;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            opacity: 0.9;
+        }
+        .version {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        .contact {
+            margin-top: 20px;
+            opacity: 0.8;
+        }
+        .back-btn {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: white;
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .tags-nav {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        .tag-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .tag-btn:hover, .tag-btn.active {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+        .api-section {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s;
+        }
+        .api-section:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        .api-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .method {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.8rem;
+            min-width: 60px;
+            text-align: center;
+        }
+        .method.GET { background: #28a745; }
+        .method.POST { background: #007bff; }
+        .method.PUT { background: #ffc107; color: black; }
+        .method.DELETE { background: #dc3545; }
+        .api-path {
+            font-family: 'Courier New', monospace;
+            font-size: 1.1rem;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 12px;
+            border-radius: 6px;
+            flex: 1;
+        }
+        .api-description {
+            color: #4ecdc4;
+            font-weight: 500;
+            font-size: 1.1rem;
+        }
+        .api-details {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 15px;
+        }
+        .detail-section {
+            margin-bottom: 20px;
+        }
+        .detail-section:last-child {
+            margin-bottom: 0;
+        }
+        .detail-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ff6b6b;
+            font-size: 1rem;
+        }
+        .parameters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+        .parameter-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .param-name {
+            font-weight: bold;
+            color: #4ecdc4;
+            margin-bottom: 5px;
+        }
+        .param-type {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 5px;
+        }
+        .param-required {
+            display: inline-block;
+            background: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 10px;
+        }
+        .param-optional {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 10px;
+        }
+        .request-body, .response-example {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .tag-indicator {
+            display: inline-block;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-left: 10px;
+        }
+        @media (max-width: 768px) {
+            .container { padding: 20px; }
+            .api-header { flex-direction: column; align-items: flex-start; }
+            .tags-nav { justify-content: flex-start; }
+            .parameters-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-btn">← 返回首页</a>
+        
+        <div class="header">
+            <h1>📚 ` + title + `</h1>
+            <p class="subtitle">` + description + `</p>
+            <div class="version">版本 ` + version + `</div>
+            <div class="contact">
+                <p>👨‍💻 维护者: ` + contactName + ` | 📧 联系邮箱: ` + contactEmail + `</p>
+            </div>
+        </div>
+
+        <div class="tags-nav">
+            <button class="tag-btn active" onclick="filterByTag('all')">全部</button>
+            <button class="tag-btn" onclick="filterByTag('auth')">认证</button>
+            <button class="tag-btn" onclick="filterByTag('treehole')">树洞</button>
+            <button class="tag-btn" onclick="filterByTag('wordpress')">WordPress</button>
+            <button class="tag-btn" onclick="filterByTag('system')">系统</button>
+        </div>
+
+        <div id="api-list">`
+
+	// 生成API文档内容
+	for _, api := range apis {
+		html += a.generateAPISection(api)
 	}
 
-	ctx.JSON(http.StatusOK, docs)
+	html += `
+        </div>
+    </div>
+
+    <script>
+        function filterByTag(tag) {
+            const sections = document.querySelectorAll('.api-section');
+            const tagBtns = document.querySelectorAll('.tag-btn');
+            
+            // 更新按钮状态
+            tagBtns.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            sections.forEach(section => {
+                if (tag === 'all' || section.dataset.tags.includes(tag)) {
+                    section.style.display = 'block';
+                } else {
+                    section.style.display = 'none';
+                }
+            });
+        }
+    </script>
+</body>
+</html>`
+
+	ctx.Header("Content-Type", "text/html; charset=utf-8")
+	ctx.String(http.StatusOK, html)
+}
+
+// 生成单个API部分的HTML
+func (a *APIDocsHandler) generateAPISection(api APIEndpoint) string {
+	html := `<div class="api-section" data-tags="` + strings.Join(api.Tags, " ") + `">
+        <div class="api-header">
+            <span class="method ` + api.Method + `">` + api.Method + `</span>
+            <span class="api-path">` + api.Path + `</span>
+            <span class="api-description">` + api.Description + `</span>
+            <span class="tag-indicator">` + strings.Join(api.Tags, ", ") + `</span>
+        </div>
+        
+        <div class="api-details">`
+
+	// 添加参数信息
+	if len(api.Parameters) > 0 {
+		html += `
+            <div class="detail-section">
+                <div class="detail-title">📋 参数</div>
+                <div class="parameters-grid">`
+
+		for _, param := range api.Parameters {
+			requiredClass := "param-optional"
+			requiredText := "可选"
+			if param.Required {
+				requiredClass = "param-required"
+				requiredText = "必需"
+			}
+
+			html += `
+                    <div class="parameter-item">
+                        <div class="param-name">` + param.Name + ` <span class="` + requiredClass + `">` + requiredText + `</span></div>
+                        <div class="param-type">类型: ` + param.Type + `</div>
+                        <div class="param-type">位置: ` + param.In + `</div>
+                        <div class="param-type">描述: ` + param.Description + `</div>`
+
+			if param.Example != "" {
+				html += `
+                        <div class="param-type">示例: ` + param.Example + `</div>`
+			}
+
+			html += `
+                    </div>`
+		}
+
+		html += `
+                </div>
+            </div>`
+	}
+
+	// 添加请求体信息
+	if api.RequestBody != nil {
+		html += `
+            <div class="detail-section">
+                <div class="detail-title">📤 请求体</div>
+                <div class="param-type">内容类型: ` + api.RequestBody.ContentType + `</div>`
+
+		if api.RequestBody.Example != nil {
+			exampleJSON, _ := json.MarshalIndent(api.RequestBody.Example, "", "  ")
+			html += `
+                <div class="request-body">` + string(exampleJSON) + `</div>`
+		}
+
+		html += `
+            </div>`
+	}
+
+	// 添加响应信息
+	if len(api.Responses) > 0 {
+		html += `
+            <div class="detail-section">
+                <div class="detail-title">📥 响应</div>`
+
+		for statusCode, response := range api.Responses {
+			html += `
+                <div class="param-type">状态码: ` + statusCode + ` - ` + response.Description + `</div>`
+
+			if response.Example != nil {
+				exampleJSON, _ := json.MarshalIndent(response.Example, "", "  ")
+				html += `
+                <div class="response-example">` + string(exampleJSON) + `</div>`
+			}
+		}
+
+		html += `
+            </div>`
+	}
+
+	html += `
+        </div>
+    </div>`
+
+	return html
 }
 
 // 显示API测试页面
