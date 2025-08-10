@@ -5,8 +5,34 @@ on:
     branches:
       - main
       - master
+    paths:
+      - 'config.json'
+      - 'server/**'
+      - 'frontend/**'
+      - 'scripts/**'
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - 'config.json'
+      - 'server/**'
+      - 'frontend/**'
+      - 'scripts/**'
+  workflow_dispatch:
+    inputs:
+      force_release:
+        description: '强制发布Release'
+        required: false
+        default: 'false'
+        type: boolean
+      check_version:
+        description: '检查版本号变更'
+        required: false
+        default: 'true'
+        type: boolean
 
 jobs:
   build-and-release:
@@ -15,6 +41,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 2  # 需要获取历史记录来比较版本
       
     - name: Set up Go
       uses: actions/setup-go@v4
@@ -37,30 +65,62 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
           
+    - name: Check version change
+      id: version_check
+      run: |
+        # 给脚本执行权限
+        chmod +x scripts/version-check.sh
+        
+        # 检查版本号变更
+        if ./scripts/version-check.sh; then
+          echo "version_changed=true" >> $GITHUB_OUTPUT
+          echo "Version change detected, proceeding with build"
+        else
+          echo "version_changed=false" >> $GITHUB_OUTPUT
+          echo "No version change detected"
+        fi
+        
+    - name: Check if build is needed
+      id: build_check
+      run: |
+        # 如果是强制发布或者版本变更，则构建
+        if [[ "${{ inputs.force_release }}" == "true" ]] || [[ "${{ steps.version_check.outputs.version_changed }}" == "true" ]]; then
+          echo "build_needed=true" >> $GITHUB_OUTPUT
+          echo "Build is needed"
+        else
+          echo "build_needed=false" >> $GITHUB_OUTPUT
+          echo "Build is not needed, skipping"
+        fi
+        
     - name: Install dependencies
+      if: steps.build_check.outputs.build_needed == 'true'
       run: |
         cd server
         go mod download
         go mod verify
         
     - name: Build backend
+      if: steps.build_check.outputs.build_needed == 'true'
       run: |
         cd server
         go build -o negaihoshi-server main.go
         
     - name: Build frontend (main)
+      if: steps.build_check.outputs.build_needed == 'true'
       run: |
         cd frontend/aii-home
         npm ci
         npm run build
         
     - name: Build frontend (admin)
+      if: steps.build_check.outputs.build_needed == 'true'
       run: |
         cd frontend/admin
         npm ci
         npm run build
         
     - name: Create release package
+      if: steps.build_check.outputs.build_needed == 'true'
       run: |
         mkdir -p release
         cp server/negaihoshi-server release/
@@ -76,16 +136,23 @@ jobs:
         zip -r negaihoshi-${{ github.ref_name }}.zip .
         
     - name: Get version
+      if: steps.build_check.outputs.build_needed == 'true'
       id: get_version
       run: |
         if [[ $GITHUB_REF == refs/tags/* ]]; then
           VERSION=${GITHUB_REF#refs/tags/}
         else
-          VERSION=$(date +'%Y%m%d-%H%M%S')
+          # 从配置文件读取版本号
+          VERSION=$(grep '"version"' config.json | sed 's/.*"version": *"\([^"]*\)".*/\1/')
+          SUFFIX=$(grep '"version_suffix"' config.json | sed 's/.*"version_suffix": *"\([^"]*\)".*/\1/')
+          if [[ -n "$SUFFIX" ]]; then
+            VERSION="${VERSION}-${SUFFIX}"
+          fi
         fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         
     - name: Create Release
+      if: steps.build_check.outputs.build_needed == 'true'
       uses: softprops/action-gh-release@v1
       with:
         files: release/negaihoshi-${{ github.ref_name }}.zip
@@ -98,6 +165,11 @@ jobs:
           - Auto-generated release package
           - Backend binary included
           - Frontend builds included
+          
+          ### Version Information
+          - **Version**: ${{ steps.get_version.outputs.version }}
+          - **Build Date**: ${{ github.event.head_commit.timestamp }}
+          - **Commit**: ${{ github.sha }}
           - Configuration files included
           
           ### Installation
