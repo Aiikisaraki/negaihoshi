@@ -257,7 +257,7 @@ negaihoshi/
 
 系统初始化时会创建默认管理员账户：
 
-- **邮箱**: admin@negaihoshi.com
+- **用户名**: admin
 - **用户名**: admin
 - **密码**: admin123
 - **角色**: 管理员
@@ -352,8 +352,3 @@ cd server
 go run cmd/config-generator/main.go -force
 ```
 
-## 📞 联系方式
-
-- 项目主页: https://github.com/your-username/negaihoshi
-- 问题反馈: https://github.com/your-username/negaihoshi/issues
-- 邮箱: admin@negaihoshi.com

@@ -1,0 +1,128 @@
+name: Auto Release
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+          
+    - name: Install dependencies
+      run: |
+        cd server
+        go mod download
+        go mod verify
+        
+    - name: Build backend
+      run: |
+        cd server
+        go build -o negaihoshi-server main.go
+        
+    - name: Build frontend (main)
+      run: |
+        cd frontend/aii-home
+        npm ci
+        npm run build
+        
+    - name: Build frontend (admin)
+      run: |
+        cd frontend/admin
+        npm ci
+        npm run build
+        
+    - name: Create release package
+      run: |
+        mkdir -p release
+        cp server/negaihoshi-server release/
+        cp -r frontend/aii-home/dist release/frontend-main
+        cp -r frontend/admin/dist release/frontend-admin
+        cp config.json release/
+        cp docker-compose.yml release/
+        cp -r scripts release/
+        cp README.md release/
+        
+        # Create zip file
+        cd release
+        zip -r negaihoshi-${{ github.ref_name }}.zip .
+        
+    - name: Get version
+      id: get_version
+      run: |
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          VERSION=${GITHUB_REF#refs/tags/}
+        else
+          VERSION=$(date +'%Y%m%d-%H%M%S')
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release/negaihoshi-${{ github.ref_name }}.zip
+        tag_name: ${{ steps.get_version.outputs.version }}
+        name: Release ${{ steps.get_version.outputs.version }}
+        body: |
+          ## Negaihoshi Release ${{ steps.get_version.outputs.version }}
+          
+          ### What's New
+          - Auto-generated release package
+          - Backend binary included
+          - Frontend builds included
+          - Configuration files included
+          
+          ### Installation
+          1. Download and extract the zip file
+          2. Configure your environment
+          3. Run the startup script
+          
+          ### Files Included
+          - `negaihoshi-server` - Backend binary
+          - `frontend-main/` - Main frontend build
+          - `frontend-admin/` - Admin frontend build
+          - `config.json` - Configuration file
+          - `docker-compose.yml` - Docker configuration
+          - `scripts/` - Startup scripts
+          - `README.md` - Documentation
+          
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: release-package
+        path: release/negaihoshi-${{ github.ref_name }}.zip
+
+
