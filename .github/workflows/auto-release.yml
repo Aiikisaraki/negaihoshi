@@ -104,11 +104,24 @@ jobs:
         # 验证依赖
         go mod verify
         
-    - name: Build backend
+    - name: Build backend (Linux)
       if: steps.build_check.outputs.build_needed == 'true'
       run: |
-        # 构建名为negaihoshi的可执行文件
-        go build -o negaihoshi server/main.go
+        # 构建Linux版本
+        GOOS=linux GOARCH=amd64 go build -o negaihoshi-linux-amd64 server/main.go
+        
+    - name: Build backend (Windows)
+      if: steps.build_check.outputs.build_needed == 'true'
+      run: |
+        # 构建Windows版本
+        GOOS=windows GOARCH=amd64 go build -o negaihoshi-windows-amd64.exe server/main.go
+        
+    - name: Build backend (macOS)
+      if: steps.build_check.outputs.build_needed == 'true'
+      run: |
+        # 构建macOS版本
+        GOOS=darwin GOARCH=amd64 go build -o negaihoshi-darwin-amd64 server/main.go
+        GOOS=darwin GOARCH=arm64 go build -o negaihoshi-darwin-arm64 server/main.go
         
     - name: Build frontend (main)
       if: steps.build_check.outputs.build_needed == 'true'
@@ -128,17 +141,56 @@ jobs:
       if: steps.build_check.outputs.build_needed == 'true'
       run: |
         mkdir -p release
-        cp negaihoshi release/
+        # 复制所有平台的后端可执行文件
+        cp negaihoshi-linux-amd64 release/
+        cp negaihoshi-windows-amd64.exe release/
+        cp negaihoshi-darwin-amd64 release/
+        cp negaihoshi-darwin-arm64 release/
+        
+        # 创建平台特定的目录结构
+        mkdir -p release/linux-amd64
+        mkdir -p release/windows-amd64
+        mkdir -p release/darwin-amd64
+        mkdir -p release/darwin-arm64
+        
+        # 复制可执行文件到对应平台目录
+        cp negaihoshi-linux-amd64 release/linux-amd64/negaihoshi
+        cp negaihoshi-windows-amd64.exe release/windows-amd64/negaihoshi.exe
+        cp negaihoshi-darwin-amd64 release/darwin-amd64/negaihoshi
+        cp negaihoshi-darwin-arm64 release/darwin-arm64/negaihoshi
+        
+        # 复制前端构建文件
         cp -r frontend/aii-home/dist release/frontend-main
         cp -r frontend/admin/dist release/frontend-admin
+        
+        # 复制配置文件和其他文件
         cp config.json release/
         cp docker-compose.yml release/
         cp -r scripts release/
         cp README.md release/
         
+        # 创建平台特定的启动脚本
+        echo '#!/bin/bash' > release/linux-amd64/start.sh
+        echo 'chmod +x ./negaihoshi' >> release/linux-amd64/start.sh
+        echo './negaihoshi' >> release/linux-amd64/start.sh
+        chmod +x release/linux-amd64/start.sh
+        
+        echo '@echo off' > release/windows-amd64/start.bat
+        echo 'negaihoshi.exe' >> release/windows-amd64/start.bat
+        
+        echo '#!/bin/bash' > release/darwin-amd64/start.sh
+        echo 'chmod +x ./negaihoshi' >> release/darwin-amd64/start.sh
+        echo './negaihoshi' >> release/darwin-amd64/start.sh
+        chmod +x release/darwin-amd64/start.sh
+        
+        echo '#!/bin/bash' > release/darwin-arm64/start.sh
+        echo 'chmod +x ./negaihoshi' >> release/darwin-arm64/start.sh
+        echo './negaihoshi' >> release/darwin-arm64/start.sh
+        chmod +x release/darwin-arm64/start.sh
+        
         # Create zip file
         cd release
-        zip -r negaihoshi-${{ github.ref_name }}.zip .
+        zip -r negaihoshi-${{ github.ref_name }}-multi-platform.zip .
         
     - name: Get version
       if: steps.build_check.outputs.build_needed == 'true'
@@ -160,15 +212,15 @@ jobs:
       if: steps.build_check.outputs.build_needed == 'true'
       uses: softprops/action-gh-release@v1
       with:
-        files: release/negaihoshi-${{ github.ref_name }}.zip
+        files: release/negaihoshi-${{ github.ref_name }}-multi-platform.zip
         tag_name: ${{ steps.get_version.outputs.version }}
         name: Release ${{ steps.get_version.outputs.version }}
         body: |
           ## Negaihoshi Release ${{ steps.get_version.outputs.version }}
           
           ### What's New
+          - Multi-platform backend binaries (Linux, Windows, macOS)
           - Auto-generated release package
-          - Backend binary included
           - Frontend builds included
           
           ### Version Information
@@ -179,11 +231,18 @@ jobs:
           
           ### Installation
           1. Download and extract the zip file
-          2. Configure your environment
-          3. Run the startup script
+          2. Navigate to your platform directory (e.g., `windows-amd64` for Windows)
+          3. Run the startup script for your platform
+          
+          ### Platform Support
+          - **Linux (AMD64)**: `linux-amd64/negaihoshi` + `start.sh`
+          - **Windows (AMD64)**: `windows-amd64/negaihoshi.exe` + `start.bat`
+          - **macOS (AMD64)**: `darwin-amd64/negaihoshi` + `start.sh`
+          - **macOS (ARM64)**: `darwin-arm64/negaihoshi` + `start.sh`
           
           ### Files Included
-          - `negaihoshi` - Backend binary
+          - Multi-platform backend binaries
+          - Platform-specific startup scripts
           - `frontend-main/` - Main frontend build
           - `frontend-admin/` - Admin frontend build
           - `config.json` - Configuration file
@@ -200,6 +259,6 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: release-package
-        path: release/negaihoshi-${{ github.ref_name }}.zip
+        path: release/negaihoshi-${{ github.ref_name }}-multi-platform.zip
 
 

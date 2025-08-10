@@ -1,3 +1,20 @@
+# GitHub Actions多平台构建支持
+
+## 2025-01-20 多平台后端构建支持
+- 扩展GitHub Actions工作流，支持构建多个平台的后端可执行文件
+- 新增Windows (.exe)、macOS (Intel/ARM) 和 Linux (AMD64) 版本支持
+- 为每个平台创建专门的启动脚本和目录结构
+- 优化Release包结构，提供更好的跨平台用户体验
+
+### 技术细节
+- **新增平台**: Windows AMD64 (.exe), macOS AMD64/ARM64, Linux AMD64
+- **构建方式**: 使用Go的交叉编译功能 (`GOOS` 和 `GOARCH` 环境变量)
+- **目录结构**: 按平台分类组织可执行文件和启动脚本
+- **启动脚本**: 为每个平台提供相应的启动方式 (`.sh` 和 `.bat`)
+- **影响范围**: GitHub Actions自动构建流程，Release包分发
+
+---
+
 # 前端TypeScript错误修复
 
 ## 2025-01-20 前端编译错误修复

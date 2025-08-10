@@ -60,6 +60,7 @@ func NewAPIDocsHandler(config *config.ConfigFunction) *APIDocsHandler {
 func (a *APIDocsHandler) RegisterAPIDocsRoutes(server *gin.Engine) {
 	server.GET("/", a.ShowHomePage)
 	server.GET("/api/docs", a.GetAPIDocumentation)
+	server.GET("/api/docs/json", a.GetAPIDocumentationJSON)
 	server.GET("/api/test", a.ShowAPITestPage)
 	server.POST("/api/test/execute", a.ExecuteAPITest)
 }
@@ -87,7 +88,7 @@ func (a *APIDocsHandler) ShowHomePage(ctx *gin.Context) {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -108,7 +109,7 @@ func (a *APIDocsHandler) ShowHomePage(ctx *gin.Context) {
         h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            background: linear-gradient(45deg, #4a90e2, #87ceeb);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -120,7 +121,7 @@ func (a *APIDocsHandler) ShowHomePage(ctx *gin.Context) {
         }
         .version {
             display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(74, 144, 226, 0.3);
             padding: 5px 15px;
             border-radius: 20px;
             font-size: 0.9rem;
@@ -134,8 +135,8 @@ func (a *APIDocsHandler) ShowHomePage(ctx *gin.Context) {
             margin-bottom: 30px;
         }
         .btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(74, 144, 226, 0.2);
+            border: 1px solid rgba(74, 144, 226, 0.4);
             color: white;
             padding: 12px 24px;
             border-radius: 10px;
@@ -144,17 +145,17 @@ func (a *APIDocsHandler) ShowHomePage(ctx *gin.Context) {
             backdrop-filter: blur(5px);
         }
         .btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(74, 144, 226, 0.4);
             transform: translateY(-2px);
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 15px rgba(74, 144, 226, 0.3);
         }
         .btn-primary {
-            background: linear-gradient(45deg, #667eea, #764ba2);
+            background: linear-gradient(45deg, #2a5298, #4a90e2);
         }
         .contact {
             margin-top: 30px;
             padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            border-top: 1px solid rgba(74, 144, 226, 0.3);
             opacity: 0.8;
         }
         .features {
@@ -164,14 +165,14 @@ func (a *APIDocsHandler) ShowHomePage(ctx *gin.Context) {
             margin: 30px 0;
         }
         .feature {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(74, 144, 226, 0.1);
             padding: 20px;
             border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 144, 226, 0.3);
         }
         .feature h3 {
             margin-bottom: 10px;
-            color: #4ecdc4;
+            color: #87ceeb;
         }
         @media (max-width: 600px) {
             .nav-buttons { flex-direction: column; align-items: center; }
@@ -239,7 +240,7 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
             min-height: 100vh;
             padding: 20px;
             color: white;
@@ -247,22 +248,22 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(74, 144, 226, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 32px rgba(74, 144, 226, 0.3);
         }
         .header {
             text-align: center;
             margin-bottom: 40px;
             padding-bottom: 30px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            border-bottom: 1px solid rgba(74, 144, 226, 0.3);
         }
         h1 {
             font-size: 2.5rem;
             margin-bottom: 10px;
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            background: linear-gradient(45deg, #4a90e2, #87ceeb);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -274,7 +275,7 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
         }
         .version {
             display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(74, 144, 226, 0.3);
             padding: 8px 20px;
             border-radius: 25px;
             font-size: 0.9rem;
@@ -286,7 +287,7 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
         }
         .back-btn {
             display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(74, 144, 226, 0.2);
             padding: 10px 20px;
             border-radius: 10px;
             text-decoration: none;
@@ -295,7 +296,7 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
             transition: all 0.3s;
         }
         .back-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(74, 144, 226, 0.4);
             transform: translateY(-2px);
         }
         .tags-nav {
@@ -306,8 +307,8 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
             justify-content: center;
         }
         .tag-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(74, 144, 226, 0.2);
+            border: 1px solid rgba(74, 144, 226, 0.4);
             color: white;
             padding: 8px 16px;
             border-radius: 20px;
@@ -315,20 +316,20 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
             transition: all 0.3s;
         }
         .tag-btn:hover, .tag-btn.active {
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(74, 144, 226, 0.4);
             transform: translateY(-2px);
         }
         .api-section {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(74, 144, 226, 0.1);
             border-radius: 15px;
             padding: 25px;
             margin-bottom: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 144, 226, 0.3);
             transition: all 0.3s;
         }
         .api-section:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(74, 144, 226, 0.3);
         }
         .api-header {
             display: flex;
@@ -345,25 +346,25 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
             min-width: 60px;
             text-align: center;
         }
-        .method.GET { background: #28a745; }
-        .method.POST { background: #007bff; }
-        .method.PUT { background: #ffc107; color: black; }
-        .method.DELETE { background: #dc3545; }
+        .method.GET { background: #4a90e2; }
+        .method.POST { background: #2a5298; }
+        .method.PUT { background: #87ceeb; color: #1e3c72; }
+        .method.DELETE { background: #1e3c72; }
         .api-path {
             font-family: 'Courier New', monospace;
             font-size: 1.1rem;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(74, 144, 226, 0.3);
             padding: 8px 12px;
             border-radius: 6px;
             flex: 1;
         }
         .api-description {
-            color: #4ecdc4;
+            color: #87ceeb;
             font-weight: 500;
             font-size: 1.1rem;
         }
         .api-details {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(74, 144, 226, 0.2);
             border-radius: 10px;
             padding: 20px;
             margin-top: 15px;
@@ -377,7 +378,7 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
         .detail-title {
             font-weight: bold;
             margin-bottom: 10px;
-            color: #ff6b6b;
+            color: #4a90e2;
             font-size: 1rem;
         }
         .parameters-grid {
@@ -386,14 +387,14 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
             gap: 15px;
         }
         .parameter-item {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(74, 144, 226, 0.1);
             padding: 15px;
             border-radius: 8px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 144, 226, 0.3);
         }
         .param-name {
             font-weight: bold;
-            color: #4ecdc4;
+            color: #87ceeb;
             margin-bottom: 5px;
         }
         .param-type {
@@ -403,7 +404,7 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
         }
         .param-required {
             display: inline-block;
-            background: #dc3545;
+            background: #1e3c72;
             color: white;
             padding: 2px 8px;
             border-radius: 10px;
@@ -412,7 +413,7 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
         }
         .param-optional {
             display: inline-block;
-            background: #28a745;
+            background: #4a90e2;
             color: white;
             padding: 2px 8px;
             border-radius: 10px;
@@ -420,7 +421,7 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
             margin-left: 10px;
         }
         .request-body, .response-example {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(74, 144, 226, 0.2);
             padding: 15px;
             border-radius: 8px;
             font-family: 'Courier New', monospace;
@@ -430,7 +431,7 @@ func (a *APIDocsHandler) GetAPIDocumentation(ctx *gin.Context) {
         }
         .tag-indicator {
             display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(74, 144, 226, 0.3);
             padding: 4px 12px;
             border-radius: 15px;
             font-size: 0.8rem;
@@ -611,7 +612,7 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 50%, #4a90e2 100%);
             min-height: 100vh;
             padding: 20px;
             color: white;
@@ -619,19 +620,19 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(74, 144, 226, 0.1);
             backdrop-filter: blur(10px);
             border-radius: 20px;
             padding: 30px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 32px rgba(74, 144, 226, 0.3);
         }
-        h1 { text-align: center; margin-bottom: 30px; color: #4ecdc4; }
+        h1 { text-align: center; margin-bottom: 30px; color: #4a90e2; }
         .api-section {
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(74, 144, 226, 0.1);
             border-radius: 10px;
             padding: 20px;
             margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(74, 144, 226, 0.3);
         }
         .api-header {
             display: flex;
@@ -645,13 +646,13 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
             font-weight: bold;
             font-size: 0.8rem;
         }
-        .method.GET { background: #28a745; }
-        .method.POST { background: #007bff; }
-        .method.PUT { background: #ffc107; color: black; }
-        .method.DELETE { background: #dc3545; }
+        .method.GET { background: #4a90e2; }
+        .method.POST { background: #2a5298; }
+        .method.PUT { background: #87ceeb; color: #1e3c72; }
+        .method.DELETE { background: #1e3c72; }
         .api-path { font-family: monospace; font-size: 1.1rem; }
         .test-form {
-            background: rgba(0, 0, 0, 0.2);
+            background: rgba(74, 144, 226, 0.2);
             padding: 15px;
             border-radius: 8px;
             margin-top: 10px;
@@ -667,16 +668,16 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
         input, textarea, select {
             width: 100%;
             padding: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.3);
+            border: 1px solid rgba(74, 144, 226, 0.4);
             border-radius: 5px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(74, 144, 226, 0.1);
             color: white;
         }
         input::placeholder, textarea::placeholder {
-            color: rgba(255, 255, 255, 0.6);
+            color: rgba(255, 255, 255, 0.7);
         }
         .btn {
-            background: #007bff;
+            background: #2a5298;
             border: none;
             color: white;
             padding: 10px 20px;
@@ -684,9 +685,9 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
             cursor: pointer;
             transition: background 0.3s;
         }
-        .btn:hover { background: #0056b3; }
+        .btn:hover { background: #1e3c72; }
         .response {
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(74, 144, 226, 0.2);
             padding: 15px;
             border-radius: 8px;
             margin-top: 15px;
@@ -695,26 +696,11 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
             max-height: 300px;
             overflow-y: auto;
         }
-        .back-btn {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 10px 20px;
-            border-radius: 10px;
-            text-decoration: none;
-            color: white;
-            margin-bottom: 20px;
-            transition: all 0.3s;
-        }
-        .back-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: translateY(-2px);
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="/" class="back-btn">← 返回首页</a>
-        <h1>🧪 API测试工具</h1>
+        <h1>API测试工具</h1>
         <div id="api-list">
             <p>正在加载API列表...</p>
         </div>
@@ -722,7 +708,7 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
 
     <script>
         // 加载API列表
-        fetch('/api/docs')
+        fetch('/api/docs/json')
             .then(response => response.json())
             .then(data => {
                 renderAPIList(data.endpoints);
@@ -739,27 +725,34 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
                 const section = document.createElement('div');
                 section.className = 'api-section';
                 
-                section.innerHTML = ` + "`" + `
-                    <div class="api-header">
-                        <span class="method ${api.method}">${api.method}</span>
-                        <span class="api-path">${api.path}</span>
-                        <span style="margin-left: auto;">${api.description}</span>
-                    </div>
-                    <div class="test-form">
-                        <div class="form-group">
-                            <label>请求URL:</label>
-                            <input type="text" value="http://localhost:9292${api.path}" readonly>
-                        </div>
-                        ${api.request_body ? ` + "`" + `
-                        <div class="form-group">
-                            <label>请求体 (JSON):</label>
-                            <textarea rows="4" placeholder='${JSON.stringify(api.request_body.example || {}, null, 2)}'></textarea>
-                        </div>
-                        ` + "`" + ` : ''}
-                        <button class="btn" onclick="testAPI('${api.method}', '${api.path}', this)">测试接口</button>
-                        <div class="response" style="display: none;"></div>
-                    </div>
-                ` + "`" + `;
+                const methodClass = api.method;
+                const methodText = api.method;
+                const path = api.path;
+                const description = api.description;
+                const hasRequestBody = api.request_body;
+                const requestBodyExample = hasRequestBody ? JSON.stringify(api.request_body.example || {}, null, 2) : '{}';
+                
+                section.innerHTML = '<div class="api-header">' +
+                    '<span class="method ' + methodClass + '">' + methodText + '</span>' +
+                    '<span class="api-path">' + path + '</span>' +
+                    '<span style="margin-left: auto;">' + description + '</span>' +
+                    '</div>' +
+                    '<div class="test-form">' +
+                    '<div class="form-group">' +
+                    '<label>请求URL:</label>' +
+                    '<input type="text" value="http://localhost:9292' + path + '" readonly>' +
+                    '</div>';
+                
+                if (hasRequestBody) {
+                    section.innerHTML += '<div class="form-group">' +
+                        '<label>请求体 (JSON):</label>' +
+                        '<textarea rows="4" placeholder=\'' + requestBodyExample + '\'></textarea>' +
+                        '</div>';
+                }
+                
+                section.innerHTML += '<button class="btn" onclick="testAPI(\'' + methodText + '\', \'' + path + '\', this)">测试接口</button>' +
+                    '<div class="response" style="display: none;"></div>' +
+                    '</div>';
                 
                 container.appendChild(section);
             });
@@ -802,13 +795,9 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
                 })
                 .then(result => {
                     responseDiv.style.display = 'block';
-                    responseDiv.textContent = ` + "`" + `状态码: ${result.status} ${result.statusText}
-
-响应头:
-${JSON.stringify(result.headers, null, 2)}
-
-响应体:
-${result.body}` + "`" + `;
+                    responseDiv.textContent = '状态码: ' + result.status + ' ' + result.statusText + '\n\n' +
+                        '响应头:\n' + JSON.stringify(result.headers, null, 2) + '\n\n' +
+                        '响应体:\n' + result.body;
                 })
                 .catch(error => {
                     responseDiv.style.display = 'block';
@@ -825,6 +814,35 @@ ${result.body}` + "`" + `;
 
 	ctx.Header("Content-Type", "text/html; charset=utf-8")
 	ctx.String(http.StatusOK, html)
+}
+
+// GetAPIDocumentationJSON 返回JSON格式的API文档
+func (a *APIDocsHandler) GetAPIDocumentationJSON(ctx *gin.Context) {
+	if !a.config.IsApiDocsEnabled() {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "API文档功能未启用"})
+		return
+	}
+
+	enabled, title, description, version, contactName, contactEmail := a.config.GetApiDocsConfig()
+	if !enabled {
+		ctx.JSON(http.StatusForbidden, gin.H{"error": "API文档功能未启用"})
+		return
+	}
+
+	apis := a.getAPIEndpoints()
+
+	docs := gin.H{
+		"title":       title,
+		"description": description,
+		"version":     version,
+		"contact": gin.H{
+			"name":  contactName,
+			"email": contactEmail,
+		},
+		"endpoints": apis,
+	}
+
+	ctx.JSON(http.StatusOK, docs)
 }
 
 // 执行API测试
