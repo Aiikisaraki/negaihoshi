@@ -2,15 +2,6 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { wordpressApi, WordPressSite } from '../requests/posts';
 
-// 转发结果接口
-interface TransferResult {
-  site_id: number;
-  success: boolean;
-  wp_post_id?: number;
-  wp_post_url?: string;
-  error?: string;
-}
-
 export const WordPressPanel = () => {
   const [sites, setSites] = useState<WordPressSite[]>([]);
   const [showBindForm, setShowBindForm] = useState(false);
