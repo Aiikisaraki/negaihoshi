@@ -101,6 +101,9 @@ func initWebServer(config *config.ConfigFunction) *gin.Engine {
 		IgnorePaths("/favicon.ico").
 		IgnorePaths("/api/treehole/list").
 		IgnorePaths("/api/treehole/list/*").
+		IgnorePaths("/api/docs").
+		IgnorePaths("/api/test").
+		IgnorePaths("/api/test/execute").
 		Build())
 	return r
 }

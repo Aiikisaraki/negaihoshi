@@ -154,6 +154,63 @@ SuccessResponse(ctx, map[string]interface{}{
 - [ ] 添加代码覆盖率检查
 - [ ] 实现自动化测试流程
 
+## 🔓 最新更新 - 2025年1月20日
+
+### 3. 登录中间件权限优化
+
+**文件**: `server/main.go`
+
+#### 变更类型
+🔓 **权限调整** - 开放文档和测试界面访问权限
+
+#### 主要改动
+
+##### 登录中间件忽略路径扩展
+```diff
+r.Use(middleware.NewLoginMiddlewareBuilder().
+	IgnorePaths("/api/users/signup").
+	IgnorePaths("/api/users/login").
+	IgnorePaths("/").
+	IgnorePaths("/favicon.ico").
+	IgnorePaths("/api/treehole/list").
+	IgnorePaths("/api/treehole/list/*").
++	IgnorePaths("/api/docs").
++	IgnorePaths("/api/test").
++	IgnorePaths("/api/test/execute").
+	Build())
+```
+
+**改进说明**:
+- ✅ 新增 `/api/docs` 路径忽略，允许未登录用户访问API文档
+- ✅ 新增 `/api/test` 路径忽略，允许未登录用户访问API测试页面
+- ✅ 新增 `/api/test/execute` 路径忽略，允许未登录用户执行API测试
+- ✅ 保持现有公开路径的访问权限不变
+
+##### 权限调整影响范围
+| 路径 | 功能描述 | 访问权限 | 变更状态 |
+|------|----------|----------|----------|
+| `/api/docs` | API文档界面 | 公开访问 | 🆕 新增 |
+| `/api/test` | API测试工具界面 | 公开访问 | 🆕 新增 |
+| `/api/test/execute` | API测试执行接口 | 公开访问 | 🆕 新增 |
+| `/` | 项目主页 | 公开访问 | ✅ 保持 |
+| `/api/treehole/list` | 树洞列表 | 公开访问 | ✅ 保持 |
+
+### 4. 用户体验改进
+
+#### 变更类型
+🎯 **用户体验** - 降低API文档和测试工具的使用门槛
+
+#### 改进效果
+- 🌐 **无需登录**: 用户可以直接访问文档和测试工具
+- 📚 **快速上手**: 开发者可以立即查看API文档
+- 🧪 **即时测试**: 无需注册即可测试API接口
+- 🔍 **透明访问**: 提高项目的可访问性和友好性
+
+#### 技术实现
+- 在 `initWebServer` 函数中扩展中间件忽略路径
+- 保持现有登录验证逻辑不变
+- 不影响其他需要登录的功能模块
+
 ## 📝 开发注意事项
 
 ### Go代码规范
