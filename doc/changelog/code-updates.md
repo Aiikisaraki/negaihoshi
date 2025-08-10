@@ -424,3 +424,86 @@
 1. **自动发布**: 推送代码或标签自动触发
 2. **手动发布**: 通过GitHub Actions手动触发Docker发布
 3. **自定义配置**: 支持自定义版本、仓库、镜像名称等参数
+
+---
+
+# Release构建自动化系统
+
+## 更新内容
+
+#### 1. GitHub Actions工作流优化
+**修改文件**: `.github/workflows/auto-release.yml`
+
+**更新内容**:
+- 修改Go模块初始化步骤，自动创建 `go.mod` 文件
+- 将项目名称设置为 `negaihoshi`
+- 构建可执行文件名为 `negaihoshi`
+- 优化Go模块缓存策略，基于 `server/go.sum` 文件
+- 添加Go模块自动初始化：`go mod init negaihoshi`
+- 自动添加依赖：`go mod tidy`
+- 下载和验证依赖：`go mod download` 和 `go mod verify`
+
+#### 2. Release启动脚本
+**修改文件**: 
+- `scripts/start-release.sh` (新增)
+- `scripts/start-release.bat` (新增)
+
+**更新内容**:
+- 创建专门用于Release版本的启动脚本
+- 使用编译好的可执行文件 `negaihoshi`
+- 支持静态前端文件服务（使用Python http.server）
+- 跨平台支持（Linux/macOS + Windows）
+- 完整的服务状态监控和日志管理
+- 优化的依赖检查（仅需Python3）
+
+#### 3. Go模块模板
+**修改文件**: `server/go.mod.template` (新增)
+
+**更新内容**:
+- 创建Go模块模板文件，包含常用依赖
+- 为GitHub Actions构建提供参考
+- 包含Gin、GORM、MySQL、JWT等核心依赖
+- 说明文件用途和构建流程
+
+#### 4. 文档更新
+**修改文件**: `README.md`
+
+**更新内容**:
+- 添加Release构建功能详细说明
+- 包含自动构建触发条件和手动构建方法
+- 提供Release包使用指南
+- 详细说明构建产物内容
+- 添加版本管理工具使用说明
+
+### 影响分析
+
+#### 正面影响
+- **构建成功**: 解决Go模块缺失导致的构建失败问题
+- **项目命名**: 统一项目名称为 `negaihoshi`
+- **部署简化**: 提供专门的Release启动脚本
+- **用户体验**: 完整的Release使用指南
+
+#### 技术优势
+- **自动初始化**: Go模块自动创建和配置
+- **依赖管理**: 自动处理Go依赖下载和验证
+- **跨平台**: 支持Linux、macOS、Windows
+- **静态服务**: 轻量级的前端文件服务
+
+### 技术细节
+- **Go版本**: 1.21+
+- **模块名称**: negaihoshi
+- **构建产物**: negaihoshi (Linux/macOS) / negaihoshi.exe (Windows)
+- **前端服务**: Python http.server (端口3000, 3001)
+- **后端服务**: 编译后的Go二进制文件 (端口9292)
+
+### 构建流程
+1. **模块初始化**: `go mod init negaihoshi`
+2. **依赖管理**: `go mod tidy` + `go mod download`
+3. **构建编译**: `go build -o negaihoshi main.go`
+4. **包创建**: 包含二进制文件、前端构建、配置文件、脚本
+5. **Release发布**: 自动创建GitHub Release并上传构建产物
+
+### 使用方式
+1. **自动构建**: 版本变更时自动触发
+2. **手动构建**: 通过GitHub Actions手动触发
+3. **本地使用**: 下载Release包后使用专用启动脚本

@@ -61,7 +61,7 @@ jobs:
         path: |
           ~/.cache/go-build
           ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        key: ${{ runner.os }}-go-${{ hashFiles('server/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
           
@@ -92,18 +92,25 @@ jobs:
           echo "Build is not needed, skipping"
         fi
         
-    - name: Install dependencies
+    - name: Initialize Go module
       if: steps.build_check.outputs.build_needed == 'true'
       run: |
         cd server
+        # 初始化Go模块
+        go mod init negaihoshi
+        # 添加必要的依赖
+        go mod tidy
+        # 下载依赖
         go mod download
+        # 验证依赖
         go mod verify
         
     - name: Build backend
       if: steps.build_check.outputs.build_needed == 'true'
       run: |
         cd server
-        go build -o negaihoshi-server main.go
+        # 构建名为negaihoshi的可执行文件
+        go build -o negaihoshi main.go
         
     - name: Build frontend (main)
       if: steps.build_check.outputs.build_needed == 'true'
@@ -123,7 +130,7 @@ jobs:
       if: steps.build_check.outputs.build_needed == 'true'
       run: |
         mkdir -p release
-        cp server/negaihoshi-server release/
+        cp server/negaihoshi release/
         cp -r frontend/aii-home/dist release/frontend-main
         cp -r frontend/admin/dist release/frontend-admin
         cp config.json release/
@@ -178,7 +185,7 @@ jobs:
           3. Run the startup script
           
           ### Files Included
-          - `negaihoshi-server` - Backend binary
+          - `negaihoshi` - Backend binary
           - `frontend-main/` - Main frontend build
           - `frontend-admin/` - Admin frontend build
           - `config.json` - Configuration file

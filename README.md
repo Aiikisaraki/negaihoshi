@@ -352,3 +352,74 @@ cd server
 go run cmd/config-generator/main.go -force
 ```
 
+## 🚀 Release 构建
+
+### 自动构建
+
+系统支持自动Release构建功能：
+
+1. **触发条件**: 当第三级版本号（0.1.x中的x）发生变化时自动触发
+2. **构建内容**: 
+   - 后端二进制文件 (`negaihoshi`)
+   - 前端构建文件 (`frontend-main/`, `frontend-admin/`)
+   - 配置文件 (`config.json`, `docker-compose.yml`)
+   - 启动脚本 (`scripts/`)
+
+### 手动构建
+
+如果需要手动触发构建：
+
+1. **GitHub Actions**: 在Actions页面手动触发 `Auto Release` 工作流
+2. **强制发布**: 设置 `force_release` 为 `true` 强制构建
+3. **版本检查**: 设置 `check_version` 为 `false` 跳过版本检查
+
+### Release包使用
+
+下载Release包后：
+
+1. **解压文件**: 解压 `negaihoshi-*.zip` 到目标目录
+2. **启动服务**: 使用Release专用启动脚本
+   ```bash
+   # Linux/macOS
+   chmod +x scripts/start-release.sh
+   ./scripts/start-release.sh
+   
+   # Windows
+   scripts\start-release.bat
+   ```
+
+### 构建产物
+
+Release包包含以下文件：
+
+```
+negaihoshi-*/                    # Release根目录
+├── negaihoshi                   # 后端可执行文件 (Linux/macOS)
+├── negaihoshi.exe              # 后端可执行文件 (Windows)
+├── frontend-main/              # 主前端构建文件
+├── frontend-admin/             # 管理员前端构建文件
+├── config.json                 # 全局配置文件
+├── docker-compose.yml          # Docker配置
+├── scripts/                    # 启动脚本
+│   ├── start-release.sh       # Linux/macOS启动脚本
+│   ├── start-release.bat      # Windows启动脚本
+│   └── ...                    # 其他脚本
+└── README.md                   # 项目文档
+```
+
+### 版本管理
+
+使用版本管理工具管理项目版本：
+
+```bash
+# Linux/macOS
+./scripts/version-manager.sh show        # 显示当前版本
+./scripts/version-manager.sh bump patch  # 增加补丁版本
+./scripts/version-manager.sh set 1.2.3  # 设置特定版本
+
+# Windows
+scripts\version-manager.bat show         # 显示当前版本
+scripts\version-manager.bat bump patch   # 增加补丁版本
+scripts\version-manager.bat set 1.2.3   # 设置特定版本
+```
+
