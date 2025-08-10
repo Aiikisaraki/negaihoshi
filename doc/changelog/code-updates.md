@@ -1,3 +1,18 @@
+# Go模块路径修复
+
+## 2025-01-20 GitHub Actions构建错误修复
+- 修复Go模块初始化路径问题，解决 `package negaihoshi/server/config is not in std` 错误
+- 将Go模块根目录从 `server/` 移动到项目根目录
+- 更新GitHub Actions工作流，确保Go模块在正确的目录中初始化
+- 删除不再需要的 `server/go.mod.template` 文件
+
+### 技术细节
+- **问题原因**: Go模块在 `server/` 目录初始化，但导入路径期望模块根目录在项目根目录
+- **解决方案**: 在项目根目录执行 `go mod init negaihoshi`，从项目根目录构建 `server/main.go`
+- **影响范围**: GitHub Actions自动构建流程，Release包创建
+
+---
+
 # 项目文档优化
 
 ## 2025-01-20 文档格式标准化

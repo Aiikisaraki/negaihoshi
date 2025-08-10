@@ -95,7 +95,6 @@ jobs:
     - name: Initialize Go module
       if: steps.build_check.outputs.build_needed == 'true'
       run: |
-        cd server
         # 初始化Go模块
         go mod init negaihoshi
         # 添加必要的依赖
@@ -108,9 +107,8 @@ jobs:
     - name: Build backend
       if: steps.build_check.outputs.build_needed == 'true'
       run: |
-        cd server
         # 构建名为negaihoshi的可执行文件
-        go build -o negaihoshi main.go
+        go build -o negaihoshi server/main.go
         
     - name: Build frontend (main)
       if: steps.build_check.outputs.build_needed == 'true'
@@ -130,7 +128,7 @@ jobs:
       if: steps.build_check.outputs.build_needed == 'true'
       run: |
         mkdir -p release
-        cp server/negaihoshi release/
+        cp negaihoshi release/
         cp -r frontend/aii-home/dist release/frontend-main
         cp -r frontend/admin/dist release/frontend-admin
         cp config.json release/
