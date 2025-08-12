@@ -9,78 +9,176 @@
 package dao
 
 import (
-	"context"
+	"database/sql"
 	"errors"
-	"strings"
 	"time"
 
-	"github.com/go-sql-driver/mysql"
-	"gorm.io/gorm"
+	"negaihoshi/server/src/domain"
 )
-
-var (
-	ErrUserDuplicateEmail  = errors.New("邮箱冲突")
-	ErrUserNotFound        = gorm.ErrRecordNotFound
-	ErrUserProfileNotFound = gorm.ErrRecordNotFound
-)
-
-type UserDAO struct {
-	db *gorm.DB
-}
-
-func NewUserDAO(db *gorm.DB) *UserDAO {
-	return &UserDAO{
-		db: db,
-	}
-}
 
 type User struct {
-	Id       int64  `gorm:"primaryKey,autoIncrement"`
-	Username string `gorm:"unique"`
-	// 设置为唯一索引
-	Email    string `gorm:"unique"`
-	Password string
-	Ctime    int64
-	Utime    int64
+	Id       int64     `gorm:"primaryKey;autoIncrement"`
+	Username string    `gorm:"unique;not null"`
+	Email    string    `gorm:"unique;not null"`
+	Password string    `gorm:"not null"`
+	Nickname string    `gorm:"size:100"`
+	Bio      string    `gorm:"type:text"`
+	Avatar   string    `gorm:"size:500"`
+	Phone    string    `gorm:"size:20"`
+	Location string    `gorm:"size:200"`
+	Website  string    `gorm:"size:500"`
+	Ctime    time.Time `gorm:"autoCreateTime"`
+	Utime    time.Time `gorm:"autoUpdateTime"`
 }
 
-func (dao *UserDAO) Insert(ctx context.Context, u User) error {
-	// 存毫秒数
-	now := time.Now().UnixMilli()
-	u.Utime = now
-	u.Ctime = now
-	err := dao.db.WithContext(ctx).Create(&u).Error
-	if mysqlErr, ok := err.(*mysql.MySQLError); ok {
-		const uniqueConflictsErrNo uint16 = 1062
-		if mysqlErr.Number == uniqueConflictsErrNo {
-			// 检查是哪个字段冲突
-			if strings.Contains(mysqlErr.Message, "username") {
-				return errors.New("用户名已被使用")
-			}
-			if strings.Contains(mysqlErr.Message, "email") {
-				// 邮箱冲突
-				return ErrUserDuplicateEmail
-			}
+type UserDAO struct {
+	db *sql.DB
+}
+
+func NewUserDAO(db *sql.DB) *UserDAO {
+	return &UserDAO{db: db}
+}
+
+func (dao *UserDAO) Insert(user *User) error {
+	query := `
+		INSERT INTO users (username, email, password, nickname, bio, avatar, phone, location, website, ctime, utime)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`
+
+	now := time.Now()
+	_, err := dao.db.Exec(query,
+		user.Username,
+		user.Email,
+		user.Password,
+		user.Nickname,
+		user.Bio,
+		user.Avatar,
+		user.Phone,
+		user.Location,
+		user.Website,
+		now,
+		now,
+	)
+
+	if err != nil {
+		// 检查是否是唯一性约束冲突
+		if err.Error() == "UNIQUE constraint failed: users.username" {
+			return errors.New("username already exists")
 		}
+		if err.Error() == "UNIQUE constraint failed: users.email" {
+			return errors.New("email already exists")
+		}
+		return err
 	}
+
+	return nil
+}
+
+func (dao *UserDAO) FindById(id int64) (*User, error) {
+	query := `
+		SELECT id, username, email, password, nickname, bio, avatar, phone, location, website, ctime, utime
+		FROM users WHERE id = ?
+	`
+
+	user := &User{}
+	err := dao.db.QueryRow(query, id).Scan(
+		&user.Id,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.Nickname,
+		&user.Bio,
+		&user.Avatar,
+		&user.Phone,
+		&user.Location,
+		&user.Website,
+		&user.Ctime,
+		&user.Utime,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (dao *UserDAO) FindByEmail(email string) (*User, error) {
+	query := `
+		SELECT id, username, email, password, nickname, bio, avatar, phone, location, website, ctime, utime
+		FROM users WHERE email = ?
+	`
+
+	user := &User{}
+	err := dao.db.QueryRow(query, email).Scan(
+		&user.Id,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.Nickname,
+		&user.Bio,
+		&user.Avatar,
+		&user.Phone,
+		&user.Location,
+		&user.Website,
+		&user.Ctime,
+		&user.Utime,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (dao *UserDAO) FindByUsername(username string) (*User, error) {
+	query := `
+		SELECT id, username, email, password, nickname, bio, avatar, phone, location, website, ctime, utime
+		FROM users WHERE username = ?
+	`
+
+	user := &User{}
+	err := dao.db.QueryRow(query, username).Scan(
+		&user.Id,
+		&user.Username,
+		&user.Email,
+		&user.Password,
+		&user.Nickname,
+		&user.Bio,
+		&user.Avatar,
+		&user.Phone,
+		&user.Location,
+		&user.Website,
+		&user.Ctime,
+		&user.Utime,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return user, nil
+}
+
+func (dao *UserDAO) UpdateProfile(id int64, profile *domain.ProfileUpdateRequest) error {
+	query := `
+		UPDATE users 
+		SET nickname = ?, bio = ?, avatar = ?, phone = ?, location = ?, website = ?, utime = ?
+		WHERE id = ?
+	`
+
+	now := time.Now()
+	_, err := dao.db.Exec(query,
+		profile.Nickname,
+		profile.Bio,
+		profile.Avatar,
+		profile.Phone,
+		profile.Location,
+		profile.Website,
+		now,
+		id,
+	)
+
 	return err
-}
-
-func (dao *UserDAO) FindById(ctx context.Context, id int64) (User, error) {
-	var u User
-	err := dao.db.WithContext(ctx).Where("id = ?", id).First(&u).Error
-	return u, err
-}
-
-func (dao *UserDAO) FindByEmail(ctx context.Context, email string) (User, error) {
-	var u User
-	err := dao.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
-	//err := dao.db.WithContext(ctx).First(&u, "email = ?", email).Error
-	return u, err
-}
-
-func (dao *UserDAO) FindByUsername(ctx context.Context, username string) (User, error) {
-	var u User
-	err := dao.db.WithContext(ctx).Where("username = ?", username).First(&u).Error
-	return u, err
 }

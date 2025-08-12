@@ -9,23 +9,16 @@
 package main
 
 import (
-	"context"
-	// "encoding/json"
 	"fmt"
 	"negaihoshi/server/config"
 	"negaihoshi/server/src/repository"
 	"negaihoshi/server/src/repository/dao"
-
-	// "negaihoshi/server/src/request"
 	"negaihoshi/server/src/service"
+	"negaihoshi/server/src/util"
 	"negaihoshi/server/src/web"
 	"negaihoshi/server/src/web/middleware"
-
-	// "io"
 	"strings"
 	"time"
-
-	"github.com/redis/go-redis/v9"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/sessions"
@@ -41,19 +34,8 @@ func main() {
 		panic(err)
 	}
 
-	// 测试
-	// wpR := request.NewWpRequest()
-	// url := "https://blog.kimisui56.work"
-	// resp, _ := wpR.TransferPosts(url, 1, "test", "test", "morikawa56", "jwLA 92JR qPwe kUme QzBg CHkZ")
-	// body, _ := io.ReadAll(resp.Body)
-	// fmt.Println("原始响应:", string(body))
-	// var result map[string]interface{}
-	// json.Unmarshal(body, &result)
-	// fmt.Println("解析后的数据:", result)
-
 	db := initDB(&serverConfig)
-	redisClient := initRedis(&serverConfig)
-	u, userService := initUser(db, redisClient)
+	u, userService := initUser(db)
 	t, treeholeService := initTreeHole(db)
 	s, statusService := initPersonalTextStatus(db)
 	apiDocs := initAPIDocsHandler(&serverConfig)
@@ -129,10 +111,13 @@ func initDB(config *config.ConfigFunction) *gorm.DB {
 		panic(err)
 	}
 
+	// 初始化用户表（包含新的个人资料字段）
 	err = dao.InitUserTable(db)
 	if err != nil {
 		panic(err)
 	}
+
+	// 初始化其他表
 	err = dao.InitUserWordpressInfoTable(db)
 	if err != nil {
 		panic(err)
@@ -144,11 +129,21 @@ func initDB(config *config.ConfigFunction) *gorm.DB {
 	return db
 }
 
-func initUser(db *gorm.DB, rc *redis.Client) (*web.UserHandler, *service.UserService) {
-	ud := dao.NewUserDAO(db)
-	wpud := dao.NewUserWordpressInfoDAO(db)
-	repo := repository.NewUserRepository(ud, wpud, rc)
-	svc := service.NewUserService(repo)
+func initUser(db *gorm.DB) (*web.UserHandler, *service.UserService) {
+	// 从gorm.DB获取底层的sql.DB
+	sqlDB, err := db.DB()
+	if err != nil {
+		panic(err)
+	}
+
+	// 初始化密码加密工具（使用配置中的密钥）
+	// 这里使用一个默认密钥，实际生产环境应该从配置文件读取
+	cryptoKey := []byte("negaihoshi-password-encryption-key-32bytes")
+	crypto := util.NewPasswordCrypto(cryptoKey)
+
+	ud := dao.NewUserDAO(sqlDB)
+	repo := repository.NewUserRepository(ud)
+	svc := service.NewUserService(repo, crypto)
 	return web.NewUserHandler(svc), svc
 }
 
@@ -165,22 +160,6 @@ func initPersonalTextStatus(db *gorm.DB) (*web.StatusAndPostsHandler, *service.S
 	repo := repository.NewStatusAndPostsRepository(sd, pd)
 	svc := service.NewStatusAndPostsService(repo)
 	return web.NewStatusAndPostsHandler(svc), svc
-}
-
-func initRedis(config *config.ConfigFunction) *redis.Client {
-	ctx := context.Background()
-	redisHost, redisPort, redisPassword := config.GetRedisConfig()
-	rdb := redis.NewClient(&redis.Options{
-		Addr:     redisHost + ":" + redisPort, // 连接地址和端口,
-		Password: redisPassword,               // no password set
-		DB:       0,                           // use default DB
-	})
-	_, err := rdb.Ping(ctx).Result()
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println("成功连接redis")
-	return rdb
 }
 
 func initAPIDocsHandler(config *config.ConfigFunction) *web.APIDocsHandler {

@@ -10,205 +10,108 @@ package repository
 
 import (
 	"context"
-	"encoding/json"
+
 	"negaihoshi/server/src/domain"
 	"negaihoshi/server/src/repository/dao"
-	"strconv"
-	"time"
-
-	"github.com/redis/go-redis/v9"
-)
-
-var (
-	ErrUserDuplicateEmail  = dao.ErrUserDuplicateEmail
-	ErrUserNotFound        = dao.ErrUserNotFound
-	ErrUserProfileNotFound = dao.ErrUserProfileNotFound
 )
 
 type UserRepository struct {
-	udao        *dao.UserDAO
-	wpudao      *dao.UserWordpressInfoDAO
-	redisClient *redis.Client
+	userDAO *dao.UserDAO
 }
 
-func NewUserRepository(udao *dao.UserDAO, wpudao *dao.UserWordpressInfoDAO, rc *redis.Client) *UserRepository {
+func NewUserRepository(userDAO *dao.UserDAO) *UserRepository {
 	return &UserRepository{
-		udao:        udao,
-		wpudao:      wpudao,
-		redisClient: rc,
+		userDAO: userDAO,
 	}
 }
 
-func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, error) {
-	// 先从cache里面找
-	urs, err := r.redisClient.Get(ctx, "userInfo-"+strconv.FormatInt(id, 10)).Result()
-	if err == nil {
-		var u dao.User
-		err = json.Unmarshal([]byte(urs), &u)
-		if err == nil {
-			return domain.User{
-				Id:       u.Id,
-				Username: u.Username,
-				Email:    u.Email,
-				Password: u.Password,
-			}, nil
-		}
+func (r *UserRepository) Create(ctx context.Context, user *domain.User) error {
+	daoUser := &dao.User{
+		Username: user.Username,
+		Email:    user.Email,
+		Password: user.Password,
+		Nickname: user.Nickname,
+		Bio:      user.Bio,
+		Avatar:   user.Avatar,
+		Phone:    user.Phone,
+		Location: user.Location,
+		Website:  user.Website,
 	}
-	// 再从dao里面找
-	u, err := r.udao.FindById(ctx, id)
-	if err != nil {
-		return domain.User{}, err
-	}
-	// 找到了回写cache
-	dataJson, err := json.Marshal(u)
-	if err != nil {
-		return domain.User{}, err
-	}
-	r.redisClient.Set(ctx, "userInfo-"+strconv.FormatInt(id, 10), dataJson, 4320*time.Hour)
 
-	return domain.User{
-		Id:       u.Id,
-		Username: u.Username,
-		Email:    u.Email,
-		Password: u.Password,
+	return r.userDAO.Insert(daoUser)
+}
+
+func (r *UserRepository) FindById(ctx context.Context, id int64) (*domain.User, error) {
+	daoUser, err := r.userDAO.FindById(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &domain.User{
+		Id:       daoUser.Id,
+		Username: daoUser.Username,
+		Email:    daoUser.Email,
+		Password: daoUser.Password,
+		Nickname: daoUser.Nickname,
+		Bio:      daoUser.Bio,
+		Avatar:   daoUser.Avatar,
+		Phone:    daoUser.Phone,
+		Location: daoUser.Location,
+		Website:  daoUser.Website,
+		Ctime:    daoUser.Ctime,
+		Utime:    daoUser.Utime,
 	}, nil
 }
 
-func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.User, error) {
-	u, err := r.udao.FindByEmail(ctx, email)
+func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
+	daoUser, err := r.userDAO.FindByEmail(email)
 	if err != nil {
-		return domain.User{}, err
+		return nil, err
 	}
-	return domain.User{
-		Id:       u.Id,
-		Username: u.Username,
-		Email:    u.Email,
-		Password: u.Password,
+
+	return &domain.User{
+		Id:       daoUser.Id,
+		Username: daoUser.Username,
+		Email:    daoUser.Email,
+		Password: daoUser.Password,
+		Nickname: daoUser.Nickname,
+		Bio:      daoUser.Bio,
+		Avatar:   daoUser.Avatar,
+		Phone:    daoUser.Phone,
+		Location: daoUser.Location,
+		Website:  daoUser.Website,
+		Ctime:    daoUser.Ctime,
+		Utime:    daoUser.Utime,
 	}, nil
 }
 
-func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
-	insertData := dao.User{
-		Username: u.Username,
-		Email:    u.Email,
-		Password: u.Password,
-	}
-	err := r.udao.Insert(ctx, insertData)
+func (r *UserRepository) FindByUsername(ctx context.Context, username string) (*domain.User, error) {
+	daoUser, err := r.userDAO.FindByUsername(username)
 	if err != nil {
-		return err
-	}
-	// 在这里操作缓存
-	uinfo, err := r.udao.FindByEmail(ctx, u.Email)
-	if err != nil {
-		return err
-	}
-	dataJson, err := json.Marshal(uinfo)
-	if err != nil {
-		return err
-	}
-	r.redisClient.Set(ctx, "userInfo-"+strconv.FormatInt(uinfo.Id, 10), dataJson, 4320*time.Hour)
-	return nil
-}
-
-func (r *UserRepository) CreateWordpressInfo(ctx context.Context, wpui domain.UserWordpressInfo) error {
-	insertData := dao.UserWordpressInfo{
-		Uid:      wpui.Uid,
-		WPuname:  wpui.WPuname,
-		WPApiKey: wpui.WPApiKey,
-	}
-	err := r.wpudao.Insert(ctx, insertData)
-	if err != nil {
-		return err
-	}
-	// 在这里操作缓存
-	dataJson, err := json.Marshal(insertData)
-	if err != nil {
-		return err
-	}
-	r.redisClient.Set(ctx, "userWPInfo-"+strconv.FormatInt(insertData.Uid, 10), dataJson, 4320*time.Hour)
-	return nil
-}
-
-func (r *UserRepository) FindWordpressInfoByUid(ctx context.Context, uid int64) (domain.UserWordpressInfo, error) {
-	var uwpinfo dao.UserWordpressInfo
-	var err error
-	var t time.Time
-	var wordpessSiteInfo domain.WordpressSite
-	var seconds int64
-	// 先从cache里面找
-	// urs, err := r.redisClient.Get(ctx, "userWPInfo-"+strconv.FormatInt(uid, 10)).Result()
-	// var uwpinfo dao.UserWordpressInfo
-	// err = json.Unmarshal([]byte(urs), &uwpinfo)
-
-	// seconds := uwpinfo.Ctime / 1000
-	// nanoseconds := (uwpinfo.Ctime % 1000) * 1e6
-	// t := time.Unix(seconds, nanoseconds)
-
-	// wordpessSiteInfo := domain.WordpressSite{
-	// 	Id:  uwpinfo.SiteWhiteList.Id,
-	// 	Url: uwpinfo.SiteWhiteList.WPSiteUrl,
-	// }
-
-	// if err == nil {
-	// 	return domain.UserWordpressInfo{
-	// 		Id:       uwpinfo.Id,
-	// 		Uid:      uwpinfo.Uid,
-	// 		WPuname:  uwpinfo.WPuname,
-	// 		WPApiKey: uwpinfo.WPApiKey,
-	// 		Ctime:    t,
-	// 		SiteInfo: wordpessSiteInfo,
-	// 	}, nil
-	// }
-	// 再从dao里面找
-	uwpinfo, err = r.wpudao.FindByUid(ctx, uid)
-	if err != nil {
-		return domain.UserWordpressInfo{}, err
-	}
-	// 找到了回写cache
-	dataJson, err := json.Marshal(uwpinfo)
-	if err != nil {
-		return domain.UserWordpressInfo{}, err
+		return nil, err
 	}
 
-	wordpessSiteInfo = domain.WordpressSite{
-		Id:  uwpinfo.SiteWhiteList.Id,
-		Url: uwpinfo.SiteWhiteList.WPSiteUrl,
-	}
-
-	seconds = uwpinfo.Ctime / 1000
-	nanoseconds := (uwpinfo.Ctime % 1000) * 1e6
-	t = time.Unix(seconds, nanoseconds)
-
-	r.redisClient.Set(ctx, "userInfo-"+strconv.FormatInt(uid, 10), dataJson, 4320*time.Hour)
-	return domain.UserWordpressInfo{
-		Id:       uwpinfo.Id,
-		Uid:      uwpinfo.Uid,
-		WPuname:  uwpinfo.WPuname,
-		WPApiKey: uwpinfo.WPApiKey,
-		Ctime:    t,
-		SiteInfo: wordpessSiteInfo,
+	return &domain.User{
+		Id:       daoUser.Id,
+		Username: daoUser.Username,
+		Email:    daoUser.Email,
+		Password: daoUser.Password,
+		Nickname: daoUser.Nickname,
+		Bio:      daoUser.Bio,
+		Avatar:   daoUser.Avatar,
+		Phone:    daoUser.Phone,
+		Location: daoUser.Location,
+		Website:  daoUser.Website,
+		Ctime:    daoUser.Ctime,
+		Utime:    daoUser.Utime,
 	}, nil
 }
 
-func (r *UserRepository) DeleteWordpressInfoByUid(ctx context.Context, uid int64) error {
-	err := r.wpudao.DeleteByUid(ctx, uid)
-	if err != nil {
-		return err
-	}
-	// 在这里操作缓存
-	r.redisClient.Del(ctx, "userWPInfo-"+strconv.FormatInt(uid, 10))
-	return nil
+func (r *UserRepository) UpdateProfile(ctx context.Context, id int64, profile *domain.ProfileUpdateRequest) error {
+	return r.userDAO.UpdateProfile(id, profile)
 }
 
-func (r *UserRepository) FindByUsername(ctx context.Context, username string) (domain.User, error) {
-	u, err := r.udao.FindByUsername(ctx, username)
-	if err != nil {
-		return domain.User{}, err
-	}
-	return domain.User{
-		Id:       u.Id,
-		Username: u.Username,
-		Email:    u.Email,
-		Password: u.Password,
-	}, nil
+func (r *UserRepository) GetTotalUserCount(ctx context.Context) (int64, error) {
+	// 实现获取用户总数的逻辑
+	return 0, nil
 }

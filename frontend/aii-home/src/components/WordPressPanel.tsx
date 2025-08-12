@@ -80,13 +80,12 @@ export const WordPressPanel = () => {
   };
 
   return (
-    <div className="space-y-6 p-6 rounded-2xl bg-white/20 border border-white/30 backdrop-blur-xl shadow-lg">
-      {/* 标题和添加按钮 */}
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-semibold text-blue-800">WordPress 集成</h3>
+    <div className="space-y-6">
+      {/* 添加按钮 */}
+      <div className="flex justify-end">
         <button
           onClick={() => setShowBindForm(true)}
-          className="px-6 py-3 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 hover:from-blue-600 hover:via-purple-600 hover:to-cyan-600 rounded-xl text-white text-base font-semibold transition-all duration-200 shadow-lg transform hover:scale-105"
+          className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl text-white font-semibold transition-all duration-200 shadow-lg hover:scale-105"
         >
           + 绑定站点
         </button>
@@ -112,13 +111,13 @@ export const WordPressPanel = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-4 bg-white/5 rounded-lg border border-white/10"
+              className="p-4 bg-white/20 rounded-lg border border-white/30 backdrop-blur-sm"
             >
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <h4 className="font-medium text-white">{site.site_name}</h4>
-                  <p className="text-sm text-white/70">{site.site_url}</p>
-                  <p className="text-xs text-white/50 mt-1">
+                  <h4 className="font-medium text-blue-800">{site.site_name}</h4>
+                  <p className="text-sm text-blue-600">{site.site_url}</p>
+                  <p className="text-xs text-blue-500 mt-1">
                     用户: {site.username} • 绑定于 {new Date(site.bind_time).toLocaleDateString()}
                   </p>
                 </div>
@@ -148,14 +147,14 @@ export const WordPressPanel = () => {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-gray-800 rounded-xl p-6 w-full max-w-md"
+              className="bg-white rounded-xl p-6 w-full max-w-md shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
-              <h3 className="text-lg font-semibold text-white mb-4">绑定WordPress站点</h3>
+              <h3 className="text-lg font-semibold text-blue-800 mb-4">绑定WordPress站点</h3>
               
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1">
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
                     站点URL *
                   </label>
                   <input
@@ -163,12 +162,12 @@ export const WordPressPanel = () => {
                     placeholder="https://your-site.com"
                     value={bindForm.site_url}
                     onChange={e => setBindForm(prev => ({ ...prev, site_url: e.target.value }))}
-                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1">
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
                     站点名称
                   </label>
                   <input
@@ -176,12 +175,12 @@ export const WordPressPanel = () => {
                     placeholder="我的博客"
                     value={bindForm.site_name}
                     onChange={e => setBindForm(prev => ({ ...prev, site_name: e.target.value }))}
-                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1">
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
                     用户名 *
                   </label>
                   <input
@@ -189,12 +188,12 @@ export const WordPressPanel = () => {
                     placeholder="WordPress用户名"
                     value={bindForm.username}
                     onChange={e => setBindForm(prev => ({ ...prev, username: e.target.value }))}
-                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-white/70 mb-1">
+                  <label className="block text-sm font-medium text-blue-700 mb-1">
                     应用密码 *
                   </label>
                   <input
@@ -202,9 +201,9 @@ export const WordPressPanel = () => {
                     placeholder="WordPress应用密码"
                     value={bindForm.api_key}
                     onChange={e => setBindForm(prev => ({ ...prev, api_key: e.target.value }))}
-                    className="w-full p-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:border-blue-400"
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
                   />
-                  <p className="text-xs text-white/50 mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     请在WordPress后台用户设置中生成应用密码
                   </p>
                 </div>
@@ -213,7 +212,7 @@ export const WordPressPanel = () => {
               <div className="flex space-x-3 mt-6">
                 <button
                   onClick={() => setShowBindForm(false)}
-                  className="flex-1 py-2 px-4 bg-gray-600 hover:bg-gray-700 rounded-lg text-white transition-colors"
+                  className="flex-1 py-2 px-4 bg-gray-200 hover:bg-gray-300 rounded-lg text-gray-700 transition-colors"
                 >
                   取消
                 </button>

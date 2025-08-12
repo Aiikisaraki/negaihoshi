@@ -1,133 +1,83 @@
 package web
 
 import (
-	"errors"
-	"fmt"
+	"net/http"
+	"strconv"
+
 	"negaihoshi/server/src/domain"
 	"negaihoshi/server/src/service"
-	"net/http"
 
-	regexp "github.com/dlclark/regexp2"
-	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
-	svc         *service.UserService
-	emailExp    *regexp.Regexp
-	passwordExp *regexp.Regexp
+	userService *service.UserService
 }
 
-func NewUserHandler(svc *service.UserService) *UserHandler {
-	const (
-		emailRegexPattern = "^[a-zA-Z0-9_-]+@[a-zA-Z0-9_-]+(\\.[a-zA-Z0-9_-]+)+$"
-		passwordPattern   = "^(?=.*[A-Za-z])(?=.*\\d)(?=.*[$@$!%*#?&])[A-Za-z\\d$@$!%*#?&]{8,}$"
-	)
-	emailExp := regexp.MustCompile(emailRegexPattern, regexp.None)
-	passwordExp := regexp.MustCompile(passwordPattern, regexp.None)
+func NewUserHandler(userService *service.UserService) *UserHandler {
 	return &UserHandler{
-		svc:         svc,
-		emailExp:    emailExp,
-		passwordExp: passwordExp,
+		userService: userService,
 	}
 }
 
-func (u *UserHandler) RegisterUserRoutes(server *gin.Engine) {
+type SignupReq struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+	Email    string `json:"email" binding:"required,email"`
+}
+
+type LoginReq struct {
+	Username string `json:"username" binding:"required"`
+	Password string `json:"password" binding:"required"`
+}
+
+type ProfileUpdateReq struct {
+	Nickname string `json:"nickname"`
+	Bio      string `json:"bio"`
+	Avatar   string `json:"avatar"`
+	Phone    string `json:"phone"`
+	Location string `json:"location"`
+	Website  string `json:"website"`
+}
+
+func (h *UserHandler) RegisterUserRoutes(server *gin.Engine) {
 	ug := server.Group("/api/users")
-	ug.POST("/signup", u.Signup)
-	ug.POST("/login", u.Login)
-	ug.POST("/wordpress/bind", u.BindWordPressInfo)
-	ug.GET("/wordpress/bindings", u.GetWordPressInfo)
-	ug.DELETE("/wordpress/bindings", u.DeleteWordPressInfo)
+	ug.POST("/signup", h.Signup)
+	ug.POST("/login", h.Login)
+	ug.POST("/logout", h.Logout)
+	ug.GET("/profile", h.GetProfile)
+	ug.PUT("/profile", h.UpdateProfile)
+
+	// 管理后台相关路由
+	adminGroup := server.Group("/api/admin")
+	adminGroup.GET("/stats", h.GetUserStats)
+	adminGroup.GET("/list", h.GetUserList)
 }
 
-func (u *UserHandler) Signup(c *gin.Context) {
-	type SignupReq struct {
-		Username string `json:"username"`
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
-
+func (h *UserHandler) Signup(c *gin.Context) {
 	var req SignupReq
-	// Bind方法会根据Content-Type来解析你的数据到req里面
-	// 解析错了，就会直接写回一个400错误
-	if err := c.Bind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "请求参数格式错误",
-			"error":   err.Error(),
+			"message": "请求参数错误: " + err.Error(),
 		})
 		return
 	}
 
-	// 验证必填字段
-	if req.Username == "" || req.Email == "" || req.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "用户名、邮箱和密码不能为空",
-		})
-		return
-	}
-
-	// 验证邮箱格式
-	ok, err := u.emailExp.MatchString(req.Email)
+	err := h.userService.SignUp(c.Request.Context(), req.Username, req.Password, req.Email)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "系统错误",
-		})
-		return
-	}
-	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "邮箱格式不正确",
-		})
-		return
-	}
-
-	// 验证密码强度
-	ok, err = u.passwordExp.MatchString(req.Password)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "系统错误",
-		})
-		return
-	}
-	if !ok {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "密码必须大于8位，包含数字、特殊字符",
-		})
-		return
-	}
-
-	// 调用service的方法
-	err = u.svc.SignUp(c, domain.User{
-		Username: req.Username,
-		Email:    req.Email,
-		Password: req.Password,
-	})
-	if errors.Is(err, service.ErrUserDuplicateEmail) {
+		var message string
+		switch err {
+		case service.ErrUserDuplicateUsername:
+			message = "用户名已被使用"
+		case service.ErrUserDuplicateEmail:
+			message = "邮箱已被使用"
+		default:
+			message = "注册失败: " + err.Error()
+		}
 		c.JSON(http.StatusConflict, gin.H{
 			"code":    409,
-			"message": "邮箱已被注册",
-		})
-		return
-	}
-	if errors.Is(err, service.ErrUserDuplicateUsername) {
-		c.JSON(http.StatusConflict, gin.H{
-			"code":    409,
-			"message": "用户名已被使用",
-		})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "系统异常，注册失败",
-			"error":   err.Error(),
+			"message": message,
 		})
 		return
 	}
@@ -135,61 +85,40 @@ func (u *UserHandler) Signup(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "注册成功",
-		"data": gin.H{
-			"username": req.Username,
-			"email":    req.Email,
-		},
 	})
 }
 
-func (u *UserHandler) Login(c *gin.Context) {
-	type LoginReq struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
-	}
+func (h *UserHandler) Login(c *gin.Context) {
 	var req LoginReq
-	if err := c.Bind(&req); err != nil {
+	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"code":    400,
-			"message": "请求参数格式错误",
-			"error":   err.Error(),
+			"message": "请求参数错误: " + err.Error(),
 		})
 		return
 	}
 
-	// 验证必填字段
-	if req.Username == "" || req.Password == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code":    400,
-			"message": "用户名和密码不能为空",
-		})
-		return
-	}
-
-	user, err := u.svc.Login(c, req.Username, req.Password)
-	if errors.Is(err, service.ErrInvaildUserOrPassword) {
+	user, err := h.userService.Login(c.Request.Context(), req.Username, req.Password)
+	if err != nil {
+		var message string
+		switch err {
+		case service.ErrInvalidCredentials:
+			message = "用户名或密码错误"
+		case service.ErrUserNotFound:
+			message = "用户不存在"
+		default:
+			message = "登录失败: " + err.Error()
+		}
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
-			"message": "用户名或密码错误",
-		})
-		return
-	}
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "系统错误",
-			"error":   err.Error(),
+			"message": message,
 		})
 		return
 	}
 
-	// 在这里登录成功了
-	sess := sessions.Default(c)
-	// 我可以随便设置值了
-	sess.Set("userId", user.Id)
-	sess.Set("username", user.Username)
-	sess.Set("email", user.Email)
-	sess.Save()
+	// 设置session
+	c.Set("user_id", user.Id)
+	c.Set("username", user.Username)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
@@ -200,64 +129,165 @@ func (u *UserHandler) Login(c *gin.Context) {
 			"email":    user.Email,
 		},
 	})
-	return
 }
 
-func (u *UserHandler) BindWordPressInfo(c *gin.Context) {
-	type BindWordPressInfoReq struct {
-		WPuname  string `json:"wpuname"`
-		WPApiKey string `json:"wpapikey"`
-	}
-	sess := sessions.Default(c)
-	uid := sess.Get("userId")
-	if uid == nil {
-		c.String(http.StatusOK, "未登录")
-		return
-	}
-	var req BindWordPressInfoReq
-	if err := c.Bind(&req); err != nil {
-		return
-	}
-	err := u.svc.BindWordPressInfo(c, domain.UserWordpressInfo{
-		// 进行类型断言，将 uid 从 interface{} 类型转换为 int64 类型
-		Uid:      uid.(int64),
-		WPuname:  req.WPuname,
-		WPApiKey: req.WPApiKey,
+func (h *UserHandler) Logout(c *gin.Context) {
+	// 清除session
+	c.Set("user_id", nil)
+	c.Set("username", nil)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "登出成功",
 	})
-	if err != nil {
-		c.String(http.StatusOK, "绑定失败")
-		return
-	}
-	c.String(http.StatusOK, "绑定成功")
 }
 
-func (u *UserHandler) GetWordPressInfo(c *gin.Context) {
-	sess := sessions.Default(c)
-	uid := sess.Get("userId")
-	if uid == nil {
-		c.String(http.StatusOK, "未登录")
+func (h *UserHandler) GetProfile(c *gin.Context) {
+	// 从session获取用户ID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "请先登录",
+		})
 		return
 	}
-	uwpinfo, err := u.svc.GetWordPressInfo(c, uid.(int64))
-	fmt.Println(err) // 输出 uwpinfo 的值以检查其内容和类型
+
+	userID, ok := userIDInterface.(int64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "用户ID类型错误",
+		})
+		return
+	}
+
+	profile, err := h.userService.GetProfile(c.Request.Context(), userID)
 	if err != nil {
-		c.String(http.StatusOK, "系统错误")
+		var message string
+		switch err {
+		case service.ErrUserNotFound:
+			message = "用户不存在"
+		default:
+			message = "获取个人资料失败: " + err.Error()
+		}
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    404,
+			"message": message,
+		})
 		return
 	}
-	c.JSON(http.StatusOK, uwpinfo)
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data":    profile,
+	})
 }
 
-func (u *UserHandler) DeleteWordPressInfo(c *gin.Context) {
-	sess := sessions.Default(c)
-	uid := sess.Get("userId")
-	if uid == nil {
-		c.String(http.StatusOK, "未登录")
+func (h *UserHandler) UpdateProfile(c *gin.Context) {
+	// 从session获取用户ID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "请先登录",
+		})
 		return
 	}
-	err := u.svc.DeleteWordPressInfo(c, uid.(int64))
+
+	userID, ok := userIDInterface.(int64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "用户ID类型错误",
+		})
+		return
+	}
+
+	var req ProfileUpdateReq
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请求参数错误: " + err.Error(),
+		})
+		return
+	}
+
+	profile := &domain.ProfileUpdateRequest{
+		Nickname: req.Nickname,
+		Bio:      req.Bio,
+		Avatar:   req.Avatar,
+		Phone:    req.Phone,
+		Location: req.Location,
+		Website:  req.Website,
+	}
+
+	err := h.userService.UpdateProfile(c.Request.Context(), userID, profile)
 	if err != nil {
-		c.String(http.StatusOK, "删除失败")
+		var message string
+		switch err {
+		case service.ErrUserNotFound:
+			message = "用户不存在"
+		default:
+			message = "更新个人资料失败: " + err.Error()
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": message,
+		})
 		return
 	}
-	c.String(http.StatusOK, "删除成功")
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "更新成功",
+	})
+}
+
+// 管理后台相关方法
+func (h *UserHandler) GetUserStats(c *gin.Context) {
+	// 获取用户统计信息
+	totalUsers, err := h.userService.GetTotalUserCount(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "获取用户统计失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 200,
+		"data": gin.H{
+			"total_users": totalUsers,
+		},
+	})
+}
+
+func (h *UserHandler) GetUserList(c *gin.Context) {
+	// 获取用户列表（分页）
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	pageSize, _ := strconv.Atoi(c.DefaultQuery("page_size", "10"))
+
+	// 这里应该实现分页逻辑
+	users := []gin.H{
+		{
+			"id":       1,
+			"username": "admin",
+			"email":    "admin@example.com",
+			"nickname": "管理员",
+			"ctime":    "2025-01-01 00:00:00",
+		},
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code": 200,
+		"data": gin.H{
+			"users":     users,
+			"page":      page,
+			"page_size": pageSize,
+			"total":     len(users),
+		},
+	})
 }

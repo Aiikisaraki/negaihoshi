@@ -11,88 +11,118 @@ package service
 import (
 	"context"
 	"errors"
+
 	"negaihoshi/server/src/domain"
 	"negaihoshi/server/src/repository"
-
-	"golang.org/x/crypto/bcrypt"
+	"negaihoshi/server/src/util"
 )
 
 var (
-	ErrUserDuplicateEmail    = repository.ErrUserDuplicateEmail
 	ErrUserDuplicateUsername = errors.New("用户名已被使用")
-	ErrInvaildUserOrPassword = errors.New("账号/邮箱或密码不对")
+	ErrUserDuplicateEmail    = errors.New("邮箱已被使用")
+	ErrUserNotFound          = errors.New("用户不存在")
+	ErrInvalidCredentials    = errors.New("用户名或密码错误")
+	ErrPasswordEncryption    = errors.New("密码加密失败")
 )
 
 type UserService struct {
-	repo *repository.UserRepository
+	userRepo *repository.UserRepository
+	crypto   *util.PasswordCrypto
 }
 
-func NewUserService(repo *repository.UserRepository) *UserService {
+func NewUserService(userRepo *repository.UserRepository, crypto *util.PasswordCrypto) *UserService {
 	return &UserService{
-		repo: repo,
+		userRepo: userRepo,
+		crypto:   crypto,
 	}
 }
 
-func (svc *UserService) SignUp(ctx context.Context, u domain.User) error {
-	//加密放在哪里
-	hash, err := bcrypt.GenerateFromPassword([]byte(u.Password), bcrypt.DefaultCost)
-	if err != nil {
-		return err
+func (svc *UserService) SignUp(ctx context.Context, username, password, email string) error {
+	// 检查用户名是否已存在
+	_, err := svc.userRepo.FindByUsername(ctx, username)
+	if err == nil {
+		return ErrUserDuplicateUsername
 	}
-	u.Password = string(hash)
-	//存起来
 
-	err = svc.repo.Create(ctx, u)
-	if err != nil {
-		if err.Error() == "用户名已被使用" {
-			return ErrUserDuplicateUsername
-		}
-		return err
+	// 检查邮箱是否已存在
+	_, err = svc.userRepo.FindByEmail(ctx, email)
+	if err == nil {
+		return ErrUserDuplicateEmail
 	}
-	return nil
+
+	// 加密密码
+	encryptedPassword, err := svc.crypto.EncryptPassword(password)
+	if err != nil {
+		return ErrPasswordEncryption
+	}
+
+	// 创建新用户
+	user := &domain.User{
+		Username: username,
+		Password: encryptedPassword, // 存储加密后的密码
+		Email:    email,
+		Nickname: username, // 默认昵称为用户名
+		Bio:      "欢迎来到星の海の物語！",
+	}
+
+	return svc.userRepo.Create(ctx, user)
 }
 
-func (svc *UserService) Login(ctx context.Context, username, password string) (domain.User, error) {
-	var u domain.User
+func (svc *UserService) Login(ctx context.Context, usernameOrEmail, password string) (*domain.User, error) {
+	var user *domain.User
 	var err error
 
-	// 先尝试通过邮箱查找用户
-	u, err = svc.repo.FindByEmail(ctx, username)
+	// 尝试通过用户名登录
+	user, err = svc.userRepo.FindByUsername(ctx, usernameOrEmail)
 	if err != nil {
-		// 如果邮箱查找失败，尝试通过用户名查找
-		u, err = svc.repo.FindByUsername(ctx, username)
+		// 尝试通过邮箱登录
+		user, err = svc.userRepo.FindByEmail(ctx, usernameOrEmail)
 		if err != nil {
-			return domain.User{}, ErrInvaildUserOrPassword
+			return nil, ErrInvalidCredentials
 		}
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
-	if err != nil {
-		return domain.User{}, ErrInvaildUserOrPassword
+	// 验证密码（使用加密验证）
+	if !svc.crypto.VerifyPassword(password, user.Password) {
+		return nil, ErrInvalidCredentials
 	}
-	return u, nil
+
+	return user, nil
 }
 
-func (svc *UserService) BindWordPressInfo(ctx context.Context, wpInfo domain.UserWordpressInfo) error {
-	err := svc.repo.CreateWordpressInfo(ctx, domain.UserWordpressInfo{
-		Uid:      wpInfo.Uid,
-		WPuname:  wpInfo.WPuname,
-		WPApiKey: wpInfo.WPApiKey,
-	})
-	return err
-}
-
-func (svc *UserService) GetWordPressInfo(ctx context.Context, uid int64) (domain.UserWordpressInfo, error) {
-	uwpinfo, err := svc.repo.FindWordpressInfoByUid(ctx, uid)
+func (svc *UserService) GetProfile(ctx context.Context, userID int64) (*domain.ProfileResponse, error) {
+	user, err := svc.userRepo.FindById(ctx, userID)
 	if err != nil {
-		return domain.UserWordpressInfo{}, err
+		return nil, ErrUserNotFound
 	}
-	return uwpinfo, nil
+
+	return &domain.ProfileResponse{
+		Id:       user.Id,
+		Username: user.Username,
+		Email:    user.Email,
+		Nickname: user.Nickname,
+		Bio:      user.Bio,
+		Avatar:   user.Avatar,
+		Phone:    user.Phone,
+		Location: user.Location,
+		Website:  user.Website,
+		Ctime:    user.Ctime.Format("2006-01-02 15:04:05"),
+		Utime:    user.Utime.Format("2006-01-02 15:04:05"),
+	}, nil
 }
 
-func (svc *UserService) DeleteWordPressInfo(ctx context.Context, uid int64) error {
-	err := svc.repo.DeleteWordpressInfoByUid(ctx, uid)
-	return err
+func (svc *UserService) UpdateProfile(ctx context.Context, userID int64, profile *domain.ProfileUpdateRequest) error {
+	// 验证用户是否存在
+	_, err := svc.userRepo.FindById(ctx, userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+
+	return svc.userRepo.UpdateProfile(ctx, userID, profile)
+}
+
+func (svc *UserService) GetTotalUserCount(ctx context.Context) (int64, error) {
+	return svc.userRepo.GetTotalUserCount(ctx)
 }
 
 // 管理后台相关方法
