@@ -19,6 +19,7 @@ import (
 
 var (
 	ErrUserDuplicateEmail    = repository.ErrUserDuplicateEmail
+	ErrUserDuplicateUsername = errors.New("用户名已被使用")
 	ErrInvaildUserOrPassword = errors.New("账号/邮箱或密码不对")
 )
 
@@ -41,21 +42,32 @@ func (svc *UserService) SignUp(ctx context.Context, u domain.User) error {
 	u.Password = string(hash)
 	//存起来
 
-	return svc.repo.Create(ctx, u)
+	err = svc.repo.Create(ctx, u)
+	if err != nil {
+		if err.Error() == "用户名已被使用" {
+			return ErrUserDuplicateUsername
+		}
+		return err
+	}
+	return nil
 }
 
-func (svc *UserService) Login(ctx context.Context, email, password string) (domain.User, error) {
-	//先找用户
-	u, err := svc.repo.FindByEmail(ctx, email)
-	if errors.Is(err, repository.ErrUserNotFound) {
-		return domain.User{}, ErrInvaildUserOrPassword
-	}
+func (svc *UserService) Login(ctx context.Context, username, password string) (domain.User, error) {
+	var u domain.User
+	var err error
+
+	// 先尝试通过邮箱查找用户
+	u, err = svc.repo.FindByEmail(ctx, username)
 	if err != nil {
-		return domain.User{}, err
+		// 如果邮箱查找失败，尝试通过用户名查找
+		u, err = svc.repo.FindByUsername(ctx, username)
+		if err != nil {
+			return domain.User{}, ErrInvaildUserOrPassword
+		}
 	}
+
 	err = bcrypt.CompareHashAndPassword([]byte(u.Password), []byte(password))
 	if err != nil {
-		// DEBUG
 		return domain.User{}, ErrInvaildUserOrPassword
 	}
 	return u, nil

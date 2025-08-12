@@ -43,86 +43,163 @@ func (u *UserHandler) RegisterUserRoutes(server *gin.Engine) {
 
 func (u *UserHandler) Signup(c *gin.Context) {
 	type SignupReq struct {
-		Email           string `json:"email"`
-		ConfirmPassword string `json:"confirmPassword"`
-		Password        string `json:"password"`
+		Username string `json:"username"`
+		Email    string `json:"email"`
+		Password string `json:"password"`
 	}
 
 	var req SignupReq
 	// Bind方法会根据Content-Type来解析你的数据到req里面
 	// 解析错了，就会直接写回一个400错误
 	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请求参数格式错误",
+			"error":   err.Error(),
+		})
 		return
 	}
 
+	// 验证必填字段
+	if req.Username == "" || req.Email == "" || req.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "用户名、邮箱和密码不能为空",
+		})
+		return
+	}
+
+	// 验证邮箱格式
 	ok, err := u.emailExp.MatchString(req.Email)
 	if err != nil {
-		c.String(http.StatusOK, "系统错误")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "系统错误",
+		})
 		return
 	}
 	if !ok {
-		c.String(http.StatusOK, "你的邮箱格式不对")
-		return
-	}
-	if req.ConfirmPassword != req.Password {
-		c.String(http.StatusOK, "两次输入的密码不一致")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "邮箱格式不正确",
+		})
 		return
 	}
 
+	// 验证密码强度
 	ok, err = u.passwordExp.MatchString(req.Password)
 	if err != nil {
-		c.String(http.StatusOK, "系统错误")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "系统错误",
+		})
 		return
 	}
 	if !ok {
-		c.String(http.StatusOK, "密码必须大于8位，包含数字、特殊字符")
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "密码必须大于8位，包含数字、特殊字符",
+		})
 		return
 	}
 
-	//调用一下svc的方法
+	// 调用service的方法
 	err = u.svc.SignUp(c, domain.User{
+		Username: req.Username,
 		Email:    req.Email,
 		Password: req.Password,
 	})
 	if errors.Is(err, service.ErrUserDuplicateEmail) {
-		c.String(http.StatusOK, "邮箱冲突")
+		c.JSON(http.StatusConflict, gin.H{
+			"code":    409,
+			"message": "邮箱已被注册",
+		})
+		return
+	}
+	if errors.Is(err, service.ErrUserDuplicateUsername) {
+		c.JSON(http.StatusConflict, gin.H{
+			"code":    409,
+			"message": "用户名已被使用",
+		})
 		return
 	}
 	if err != nil {
-		c.String(http.StatusOK, "系统异常")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "系统异常，注册失败",
+			"error":   err.Error(),
+		})
 		return
 	}
 
-	c.String(http.StatusOK, "注册成功")
-	fmt.Printf("%+v\n", req)
-	// 以下是数据库操作
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "注册成功",
+		"data": gin.H{
+			"username": req.Username,
+			"email":    req.Email,
+		},
+	})
 }
 
 func (u *UserHandler) Login(c *gin.Context) {
 	type LoginReq struct {
-		Email    string `json:"email"`
+		Username string `json:"username"`
 		Password string `json:"password"`
 	}
 	var req LoginReq
 	if err := c.Bind(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "请求参数格式错误",
+			"error":   err.Error(),
+		})
 		return
 	}
-	user, err := u.svc.Login(c, req.Email, req.Password)
+
+	// 验证必填字段
+	if req.Username == "" || req.Password == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "用户名和密码不能为空",
+		})
+		return
+	}
+
+	user, err := u.svc.Login(c, req.Username, req.Password)
 	if errors.Is(err, service.ErrInvaildUserOrPassword) {
-		c.String(http.StatusOK, "用户名或密码不对")
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "用户名或密码错误",
+		})
 		return
 	}
 	if err != nil {
-		c.String(http.StatusOK, "系统错误")
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "系统错误",
+			"error":   err.Error(),
+		})
 		return
 	}
-	// 步骤 2
+
 	// 在这里登录成功了
 	sess := sessions.Default(c)
 	// 我可以随便设置值了
 	sess.Set("userId", user.Id)
+	sess.Set("username", user.Username)
+	sess.Set("email", user.Email)
 	sess.Save()
-	c.String(http.StatusOK, "登录成功")
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "登录成功",
+		"data": gin.H{
+			"user_id":  user.Id,
+			"username": user.Username,
+			"email":    user.Email,
+		},
+	})
 	return
 }
 

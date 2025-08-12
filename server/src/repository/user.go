@@ -43,15 +43,19 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 	// 先从cache里面找
 	urs, err := r.redisClient.Get(ctx, "userInfo-"+strconv.FormatInt(id, 10)).Result()
 	if err == nil {
-		return domain.User{}, err
-	}
-	var u dao.User
-	err = json.Unmarshal([]byte(urs), &u)
-	if err != nil {
-		return domain.User{}, err
+		var u dao.User
+		err = json.Unmarshal([]byte(urs), &u)
+		if err == nil {
+			return domain.User{
+				Id:       u.Id,
+				Username: u.Username,
+				Email:    u.Email,
+				Password: u.Password,
+			}, nil
+		}
 	}
 	// 再从dao里面找
-	u, err = r.udao.FindById(ctx, id)
+	u, err := r.udao.FindById(ctx, id)
 	if err != nil {
 		return domain.User{}, err
 	}
@@ -64,6 +68,7 @@ func (r *UserRepository) FindById(ctx context.Context, id int64) (domain.User, e
 
 	return domain.User{
 		Id:       u.Id,
+		Username: u.Username,
 		Email:    u.Email,
 		Password: u.Password,
 	}, nil
@@ -76,6 +81,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 	}
 	return domain.User{
 		Id:       u.Id,
+		Username: u.Username,
 		Email:    u.Email,
 		Password: u.Password,
 	}, nil
@@ -83,6 +89,7 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (domain.
 
 func (r *UserRepository) Create(ctx context.Context, u domain.User) error {
 	insertData := dao.User{
+		Username: u.Username,
 		Email:    u.Email,
 		Password: u.Password,
 	}
@@ -191,4 +198,17 @@ func (r *UserRepository) DeleteWordpressInfoByUid(ctx context.Context, uid int64
 	// 在这里操作缓存
 	r.redisClient.Del(ctx, "userWPInfo-"+strconv.FormatInt(uid, 10))
 	return nil
+}
+
+func (r *UserRepository) FindByUsername(ctx context.Context, username string) (domain.User, error) {
+	u, err := r.udao.FindByUsername(ctx, username)
+	if err != nil {
+		return domain.User{}, err
+	}
+	return domain.User{
+		Id:       u.Id,
+		Username: u.Username,
+		Email:    u.Email,
+		Password: u.Password,
+	}, nil
 }

@@ -84,7 +84,7 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
   if (loading && messages.length === 0) {
     return (
       <div className="flex justify-center items-center h-32">
-        <div className="animate-spin rounded-full h-8 w-8 border-2 border-pink-300 border-t-transparent"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-300 border-t-transparent"></div>
       </div>
     );
   }
@@ -95,7 +95,7 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
         <div className="text-white/60 mb-4">{error}</div>
         <button 
           onClick={() => loadMessages(1, true)}
-          className="px-4 py-2 bg-pink-400/20 hover:bg-pink-400/30 rounded-lg text-pink-300 transition-colors"
+          className="px-4 py-2 bg-blue-400/20 hover:bg-blue-400/30 rounded-lg text-blue-300 transition-colors"
         >
           重试
         </button>
@@ -113,20 +113,20 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ delay: index * 0.1 }}
-            className="p-4 rounded-xl bg-white/5 backdrop-blur-sm hover:bg-white/10 transition-colors"
+            className="p-5 rounded-2xl bg-white/20 backdrop-blur-xl hover:bg-white/30 transition-all duration-200 border border-white/30 shadow-lg"
           >
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-pink-400/20 to-blue-400/20 rounded-full flex items-center justify-center">
-                <span className="text-xs text-white/70">#</span>
+            <div className="flex items-start space-x-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-cyan-500/20 rounded-full flex items-center justify-center">
+                <span className="text-sm text-blue-700">#</span>
               </div>
               <div className="flex-1 min-w-0">
-                <div className="flex items-baseline space-x-2 mb-2">
-                  <span className="font-medium text-pink-200">匿名用户</span>
-                  <span className="text-xs text-white/50">
+                <div className="flex items-baseline space-x-3 mb-3">
+                  <span className="font-medium text-blue-800">匿名用户</span>
+                  <span className="text-sm text-blue-600">
                     {formatTime(message.ctime)}
                   </span>
                 </div>
-                <p className="text-white/90 leading-relaxed whitespace-pre-wrap break-words">
+                <p className="text-blue-700 leading-relaxed whitespace-pre-wrap break-words text-base">
                   {message.content}
                 </p>
               </div>
@@ -136,7 +136,7 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
       </AnimatePresence>
       
       {messages.length === 0 && !loading && (
-        <div className="text-center py-8 text-white/60">
+        <div className="text-center py-10 text-blue-600">
           暂无动态，快来发布第一条吧！
         </div>
       )}
@@ -146,7 +146,7 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
           <button 
             onClick={loadMore}
             disabled={loading}
-            className="px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-white/70 transition-colors disabled:opacity-50"
+            className="px-8 py-3 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-cyan-500/20 hover:from-blue-500/30 hover:via-purple-500/30 hover:to-cyan-500/30 rounded-full text-blue-700 transition-all duration-200 disabled:opacity-50 border border-blue-400/40 shadow-lg font-medium"
           >
             {loading ? '加载中...' : '加载更多'}
           </button>

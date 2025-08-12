@@ -80,13 +80,13 @@ export const WordPressPanel = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6 rounded-2xl bg-white/20 border border-white/30 backdrop-blur-xl shadow-lg">
       {/* 标题和添加按钮 */}
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-white">WordPress 集成</h3>
+        <h3 className="text-xl font-semibold text-blue-800">WordPress 集成</h3>
         <button
           onClick={() => setShowBindForm(true)}
-          className="px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg text-white text-sm transition-colors"
+          className="px-6 py-3 bg-gradient-to-r from-blue-500 via-purple-500 to-cyan-500 hover:from-blue-600 hover:via-purple-600 hover:to-cyan-600 rounded-xl text-white text-base font-semibold transition-all duration-200 shadow-lg transform hover:scale-105"
         >
           + 绑定站点
         </button>
@@ -95,7 +95,7 @@ export const WordPressPanel = () => {
       {/* 已绑定的站点列表 */}
       <div className="space-y-3">
         {sites.length === 0 ? (
-          <div className="text-center p-6 text-white/60">
+          <div className="text-center p-8 text-blue-600">
             暂未绑定WordPress站点
             <br />
             <button

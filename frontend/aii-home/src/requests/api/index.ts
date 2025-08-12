@@ -23,12 +23,48 @@ apiClient.interceptors.request.use(
 // 响应拦截器
 apiClient.interceptors.response.use(
   (response) => {
+    // 如果响应状态码是2xx，直接返回数据
     return response.data;
   },
   (error) => {
     // 统一错误处理
-    console.error('API 请求错误:', error);
-    return Promise.reject(error);
+    if (error.response) {
+      // 服务器返回了错误状态码
+      const { status, data } = error.response;
+      console.error('API 响应错误:', status, data);
+      
+      // 如果后端返回了结构化的错误信息，使用它
+      if (data && typeof data === 'object') {
+        return Promise.reject({
+          code: status,
+          message: data.message || `请求失败 (${status})`,
+          data: data.data || null
+        });
+      }
+      
+      // 否则返回通用的错误信息
+      return Promise.reject({
+        code: status,
+        message: `请求失败 (${status})`,
+        data: null
+      });
+    } else if (error.request) {
+      // 请求已发出但没有收到响应
+      console.error('API 请求超时或无响应:', error.request);
+      return Promise.reject({
+        code: 0,
+        message: '网络连接失败，请检查网络设置',
+        data: null
+      });
+    } else {
+      // 请求配置出错
+      console.error('API 请求配置错误:', error.message);
+      return Promise.reject({
+        code: 0,
+        message: '请求配置错误',
+        data: null
+      });
+    }
   }
 );
 

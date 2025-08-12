@@ -11,6 +11,7 @@ package dao
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/go-sql-driver/mysql"
@@ -34,7 +35,8 @@ func NewUserDAO(db *gorm.DB) *UserDAO {
 }
 
 type User struct {
-	Id int64 `gorm:"primaryKey,autoIncrement"`
+	Id       int64  `gorm:"primaryKey,autoIncrement"`
+	Username string `gorm:"unique"`
 	// 设置为唯一索引
 	Email    string `gorm:"unique"`
 	Password string
@@ -51,8 +53,14 @@ func (dao *UserDAO) Insert(ctx context.Context, u User) error {
 	if mysqlErr, ok := err.(*mysql.MySQLError); ok {
 		const uniqueConflictsErrNo uint16 = 1062
 		if mysqlErr.Number == uniqueConflictsErrNo {
-			// 邮箱冲突
-			return ErrUserDuplicateEmail
+			// 检查是哪个字段冲突
+			if strings.Contains(mysqlErr.Message, "username") {
+				return errors.New("用户名已被使用")
+			}
+			if strings.Contains(mysqlErr.Message, "email") {
+				// 邮箱冲突
+				return ErrUserDuplicateEmail
+			}
 		}
 	}
 	return err
@@ -68,5 +76,11 @@ func (dao *UserDAO) FindByEmail(ctx context.Context, email string) (User, error)
 	var u User
 	err := dao.db.WithContext(ctx).Where("email = ?", email).First(&u).Error
 	//err := dao.db.WithContext(ctx).First(&u, "email = ?", email).Error
+	return u, err
+}
+
+func (dao *UserDAO) FindByUsername(ctx context.Context, username string) (User, error) {
+	var u User
+	err := dao.db.WithContext(ctx).Where("username = ?", username).First(&u).Error
 	return u, err
 }
