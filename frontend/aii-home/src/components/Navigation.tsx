@@ -1,3 +1,11 @@
+/*
+ * @Author: Aii如樱如月 morikawa@kimisui56.work
+ * @Date: 2025-07-26 20:27:08
+ * @LastEditors: Aii如樱如月 morikawa@kimisui56.work
+ * @LastEditTime: 2025-08-13 21:07:09
+ * @FilePath: \negaihoshi\frontend\aii-home\src\components\Navigation.tsx
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 import { useState } from 'react';
 import { AuthPanel } from './AuthPanel';
 
@@ -12,7 +20,7 @@ export function Navigation({ isLoggedIn, onLoginSuccess, onLogout }: NavigationP
 
   return (
     <>
-      {/* 主导航栏 */}
+      {/* 简化后的导航栏 */}
       <nav className="bg-gradient-to-r from-blue-600/90 via-purple-600/90 to-cyan-600/90 backdrop-blur-xl border-b border-white/20 shadow-lg">
         <div className="container mx-auto px-4 sm:px-6 py-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
@@ -45,7 +53,7 @@ export function Navigation({ isLoggedIn, onLoginSuccess, onLogout }: NavigationP
               <div className="flex items-center space-x-3">
                 {isLoggedIn ? (
                   <>
-                    <span className="text-white/80 text-sm">欢迎回来</span>
+                    <span className="text-white/80 text-sm hidden sm:inline">欢迎回来</span>
                     <button
                       onClick={onLogout}
                       className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 rounded-lg text-red-300 transition-colors text-sm"
@@ -66,35 +74,6 @@ export function Navigation({ isLoggedIn, onLoginSuccess, onLogout }: NavigationP
           </div>
         </div>
       </nav>
-
-      {/* 登录状态显示区域 - 整合到导航中 */}
-      <div className="bg-gradient-to-r from-blue-300/30 via-purple-300/30 to-cyan-300/30 border-b border-blue-400/20">
-        <div className="container mx-auto px-4 sm:px-6 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-            {/* 欢迎信息 */}
-            <div className="text-center sm:text-left">
-              <h2 className="text-lg sm:text-xl font-semibold text-blue-800">
-                {isLoggedIn ? '欢迎来到星の海の物語' : '欢迎来到星の海の物語'}
-              </h2>
-              <p className="text-sm text-blue-700">
-                {isLoggedIn ? '在这里分享你的心情和想法' : '登录后即可发布动态和参与互动'}
-              </p>
-            </div>
-            
-            {/* 用户操作区域 */}
-            <div className="flex justify-center sm:justify-end space-x-3">
-              {isLoggedIn && (
-                <a 
-                  href="#profile" 
-                  className="px-4 py-2 bg-white/30 hover:bg-white/50 text-blue-700 rounded-lg transition-colors text-sm font-medium border border-white/40"
-                >
-                  个人中心
-                </a>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* 登录界面 - 独立显示，不合并到导航中 */}
       {showAuth && (
