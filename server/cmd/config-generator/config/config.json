@@ -1,29 +1,30 @@
 {
     "frontend-prefix": [
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://localhost:3001"
     ],
     "server-port": "9292",
     "api-docs": {
         "enabled": true,
-        "title": "Negaihoshi API Documentation",
-        "description": "愿い星 - 星空树洞API接口文档",
-        "version": "v1.0.0",
+        "title": "树洞系统 API Documentation",
+        "description": "一个匿名分享心情的平台",
+        "version": "1.0.0",
         "contact": {
-            "name": "Aii如樱如月",
-            "email": "morikawa@kimisui56.work"
+            "name": "Negaihoshi Team",
+            "email": "admin@negaihoshi.com"
         }
     },
     "database": {
         "type": "mysql",
-        "host": "",
-        "port": "",
-        "user": "",
-        "password": "",
-        "database-name": ""
+        "host": "localhost",
+        "port": "3306",
+        "user": "root",
+        "password": "password",
+        "database-name": "negaihoshi"
     },
     "redis": {
-        "host": "",
-        "port": "",
+        "host": "localhost",
+        "port": "6379",
         "password": ""
     },
     "storage": {

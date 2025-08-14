@@ -200,6 +200,18 @@ func (cg *ConfigGenerator) convertToBackendConfig(global *GlobalConfig) *Config 
 	backend.Redis.Port = fmt.Sprintf("%d", global.Redis.Port)
 	backend.Redis.Password = global.Redis.Password
 
+	// 设置默认存储配置
+	backend.Storage.Type = "local"
+	backend.Storage.Local.Path = "./uploads/avatars"
+	backend.Storage.TencentCOS.SecretID = ""
+	backend.Storage.TencentCOS.SecretKey = ""
+	backend.Storage.TencentCOS.BucketURL = ""
+	backend.Storage.TencentCOS.Region = ""
+	backend.Storage.AliyunOSS.AccessKeyID = ""
+	backend.Storage.AliyunOSS.AccessKeySecret = ""
+	backend.Storage.AliyunOSS.Endpoint = ""
+	backend.Storage.AliyunOSS.BucketName = ""
+
 	return backend
 }
 

@@ -17,6 +17,7 @@ import (
 	"negaihoshi/server/src/util"
 	"negaihoshi/server/src/web"
 	"negaihoshi/server/src/web/middleware"
+	"net/http"
 	"strings"
 	"time"
 
@@ -35,7 +36,7 @@ func main() {
 	}
 
 	db := initDB(&serverConfig)
-	u, userService := initUser(db)
+	_, userService := initUser(db, &serverConfig.Config)
 	t, treeholeService := initTreeHole(db)
 	s, statusService := initPersonalTextStatus(db)
 	apiDocs := initAPIDocsHandler(&serverConfig)
@@ -43,7 +44,7 @@ func main() {
 	r := initWebServer(&serverConfig)
 
 	// 注册路由
-	u.RegisterUserRoutes(r)
+	// 注意：用户路由已经在 initUser 中注册，这里不需要重复注册
 	t.RegisterTreeHoleRoutes(r)
 	s.RegisterStatusAndPostsRoutes(r)
 	apiDocs.RegisterAPIDocsRoutes(r)
@@ -51,6 +52,7 @@ func main() {
 
 	r.Static("/assets", "./assets")
 	r.StaticFile("/favicon.ico", "./assets/favicon.ico")
+	// 注意：uploads静态文件服务已经在initWebServer中配置，这里不需要重复配置
 	serverPort := serverConfig.GetServerPort()
 	r.Run(":" + serverPort)
 }
@@ -85,6 +87,14 @@ func initWebServer(config *config.ConfigFunction) *gin.Engine {
 		MaxAge: 12 * time.Hour,
 	}))
 	store := cookie.NewStore([]byte("secret"))
+	store.Options(sessions.Options{
+		Path:     "/",
+		Domain:   "",
+		MaxAge:   86400 * 7, // 7 days
+		Secure:   false,     // 开发环境设为false
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	})
 	r.Use(sessions.Sessions("ssid", store))
 	r.Use(middleware.NewLoginMiddlewareBuilder().
 		IgnorePaths("/api/users/signup").
@@ -99,7 +109,20 @@ func initWebServer(config *config.ConfigFunction) *gin.Engine {
 		IgnorePaths("/api/test/execute").
 		IgnorePaths("/admin").
 		IgnorePaths("/admin/*").
+		IgnorePaths("/uploads").
+		IgnorePaths("/uploads/*").
 		Build())
+
+	// 初始化数据库连接
+	db := initDB(config)
+
+	// 初始化用户相关服务并注册路由
+	userHandler, _ := initUser(db, &config.Config)
+	userHandler.RegisterUserRoutes(r)
+
+	// 添加静态文件服务，用于访问上传的头像
+	r.Static("/uploads", "./uploads")
+
 	return r
 }
 
@@ -129,7 +152,7 @@ func initDB(config *config.ConfigFunction) *gorm.DB {
 	return db
 }
 
-func initUser(db *gorm.DB) (*web.UserHandler, *service.UserService) {
+func initUser(db *gorm.DB, config *config.Config) (*web.UserHandler, *service.UserService) {
 	// 从gorm.DB获取底层的sql.DB
 	sqlDB, err := db.DB()
 	if err != nil {
@@ -141,10 +164,13 @@ func initUser(db *gorm.DB) (*web.UserHandler, *service.UserService) {
 	cryptoKey := []byte("negaihoshi-password-encryption-key-32bytes")
 	crypto := util.NewPasswordCrypto(cryptoKey)
 
+	// 初始化存储服务（从配置中读取）
+	avatarStorage := service.NewAvatarStorage(config)
+
 	ud := dao.NewUserDAO(sqlDB)
 	repo := repository.NewUserRepository(ud)
-	svc := service.NewUserService(repo, crypto)
-	return web.NewUserHandler(svc), svc
+	svc := service.NewUserService(repo, crypto, avatarStorage)
+	return web.NewUserHandler(svc, avatarStorage), svc
 }
 
 func initTreeHole(db *gorm.DB) (*web.TreeHoleHandler, *service.TreeHoleService) {

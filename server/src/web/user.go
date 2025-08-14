@@ -1,22 +1,28 @@
 package web
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+
+	"mime/multipart"
 
 	"negaihoshi/server/src/domain"
 	"negaihoshi/server/src/service"
 
+	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
 )
 
 type UserHandler struct {
-	userService *service.UserService
+	userService   *service.UserService
+	avatarStorage service.AvatarStorage
 }
 
-func NewUserHandler(userService *service.UserService) *UserHandler {
+func NewUserHandler(userService *service.UserService, avatarStorage service.AvatarStorage) *UserHandler {
 	return &UserHandler{
-		userService: userService,
+		userService:   userService,
+		avatarStorage: avatarStorage,
 	}
 }
 
@@ -47,6 +53,7 @@ func (h *UserHandler) RegisterUserRoutes(server *gin.Engine) {
 	ug.POST("/logout", h.Logout)
 	ug.GET("/profile", h.GetProfile)
 	ug.PUT("/profile", h.UpdateProfile)
+	ug.POST("/avatar", h.UploadAvatar) // 添加头像上传接口
 
 	// 管理后台相关路由
 	adminGroup := server.Group("/api/admin")
@@ -117,6 +124,21 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 
 	// 设置session
+	sess := sessions.Default(c)
+	sess.Set("userId", user.Id)
+	sess.Set("username", user.Username)
+	err = sess.Save()
+	if err != nil {
+		fmt.Printf("保存session失败: %v\n", err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "session保存失败",
+		})
+		return
+	}
+	fmt.Printf("Session保存成功，userId: %v, username: %v\n", user.Id, user.Username)
+
+	// 同时设置到上下文中，供后续处理器使用
 	c.Set("user_id", user.Id)
 	c.Set("username", user.Username)
 
@@ -133,6 +155,11 @@ func (h *UserHandler) Login(c *gin.Context) {
 
 func (h *UserHandler) Logout(c *gin.Context) {
 	// 清除session
+	sess := sessions.Default(c)
+	sess.Clear()
+	sess.Save()
+
+	// 同时清除上下文中的值
 	c.Set("user_id", nil)
 	c.Set("username", nil)
 
@@ -243,6 +270,94 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		"code":    200,
 		"message": "更新成功",
 	})
+}
+
+// UploadAvatar handles avatar upload
+func (h *UserHandler) UploadAvatar(c *gin.Context) {
+	// 从session获取用户ID
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "请先登录",
+		})
+		return
+	}
+
+	userID, ok := userIDInterface.(int64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "用户ID类型错误",
+		})
+		return
+	}
+
+	// 获取上传的文件
+	file, err := c.FormFile("avatar")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "未找到上传的文件: " + err.Error(),
+		})
+		return
+	}
+
+	// 检查文件大小 (限制为5MB)
+	if file.Size > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "文件大小不能超过5MB",
+		})
+		return
+	}
+
+	// 检查文件类型
+	if !isImageFile(file) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"code":    400,
+			"message": "只支持图片文件上传",
+		})
+		return
+	}
+
+	// 打开文件
+	src, err := file.Open()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "无法打开上传的文件: " + err.Error(),
+		})
+		return
+	}
+	defer src.Close()
+
+	// 保存头像
+	avatarURL, err := h.avatarStorage.SaveAvatar(src, userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "保存头像失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "头像上传成功",
+		"data": gin.H{
+			"avatar_url": avatarURL,
+		},
+	})
+}
+
+// isImageFile checks if the uploaded file is an image
+func isImageFile(file *multipart.FileHeader) bool {
+	contentType := file.Header.Get("Content-Type")
+	return contentType == "image/jpeg" ||
+		contentType == "image/jpg" ||
+		contentType == "image/png" ||
+		contentType == "image/gif"
 }
 
 // 管理后台相关方法

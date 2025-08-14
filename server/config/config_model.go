@@ -1,11 +1,3 @@
-/*
- * @Author: Aii 如樱如月 morikawa@kimisui56.work
- * @Date: 2025-05-01 16:26:20
- * @LastEditors: Aii 如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-05-01 16:30:03
- * @FilePath: \negaihoshi\server\config\config_model.go
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
- */
 package config
 
 type Config struct {
@@ -34,4 +26,22 @@ type Config struct {
 		Port     string `json:"port"`
 		Password string `json:"password"`
 	} `json:"redis"`
+	Storage struct {
+		Type string `json:"type"` // "local", "tencent-cos", "aliyun-oss"
+		Local struct {
+			Path string `json:"path"`
+		} `json:"local"`
+		TencentCOS struct {
+			SecretID  string `json:"secret-id"`
+			SecretKey string `json:"secret-key"`
+			BucketURL string `json:"bucket-url"`
+			Region    string `json:"region"`
+		} `json:"tencent-cos"`
+		AliyunOSS struct {
+			AccessKeyID     string `json:"access-key-id"`
+			AccessKeySecret string `json:"access-key-secret"`
+			Endpoint        string `json:"endpoint"`
+			BucketName      string `json:"bucket-name"`
+		} `json:"aliyun-oss"`
+	} `json:"storage"`
 }

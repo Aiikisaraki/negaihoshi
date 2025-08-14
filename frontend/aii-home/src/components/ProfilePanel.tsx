@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
+import apiClient, { APIResponse } from '../requests/api';
 
 interface ProfileData {
   username: string;
@@ -49,48 +50,103 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
     setUploadProgress(0);
 
     try {
-      // 模拟上传进度
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 100);
+      console.log('开始上传头像:', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type
+      });
 
-      // 这里应该调用实际的上传API
-      // const formData = new FormData();
-      // formData.append('avatar', file);
-      // const response = await uploadAvatar(formData);
-      
-      // 模拟上传完成
-      setTimeout(() => {
+      // 创建FormData对象用于上传文件
+      const formData = new FormData();
+      formData.append('avatar', file);
+
+      console.log('FormData内容:', {
+        hasAvatar: formData.has('avatar'),
+        avatarFile: formData.get('avatar')
+      });
+
+      // 上传头像到服务器
+      const response = await apiClient.post('/users/avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          if (progressEvent.total) {
+            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+            setUploadProgress(progress);
+            console.log('上传进度:', progress + '%');
+          }
+        },
+      }) as APIResponse<{ avatar_url: string }>;
+
+      console.log('头像上传响应:', response);
+
+      // 上传成功，更新头像URL
+      if (response.code === 200 && response.data?.avatar_url) {
+        handleInputChange('avatar', response.data.avatar_url);
         setUploadProgress(100);
-        setIsUploading(false);
-        
-        // 创建本地预览URL
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (e.target?.result) {
-            handleInputChange('avatar', e.target.result as string);
-          }
-        };
-        reader.readAsDataURL(file);
-      }, 2000);
-
-    } catch (error) {
+        alert('头像上传成功！');
+      } else {
+        throw new Error(response.message || '上传失败');
+      }
+    } catch (error: unknown) {
       console.error('头像上传失败:', error);
-      alert('头像上传失败，请重试');
+      
+      // 显示详细的错误信息
+      let errorMessage = '未知错误';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        const errorObj = error as { message?: string; details?: { status?: number; url?: string } };
+        if (errorObj.message) {
+          errorMessage = errorObj.message;
+        }
+        if (errorObj.details) {
+          errorMessage += `\n\n详细信息:\n状态码: ${errorObj.details.status}\nURL: ${errorObj.details.url}`;
+        }
+      }
+      
+      alert(`头像上传失败:\n\n${errorMessage}\n\n请检查:\n1. 是否已登录\n2. 网络连接是否正常\n3. 服务器是否运行`);
+    } finally {
       setIsUploading(false);
-      setUploadProgress(0);
     }
   };
 
-  const handleSave = () => {
-    onSave(profile);
-    setIsEditing(false);
+  const handleSave = async () => {
+    try {
+      console.log('开始保存个人资料:', profile);
+
+      // 发送更新请求到服务器
+      const response = await apiClient.put('/users/profile', profile) as APIResponse;
+      
+      console.log('个人资料更新响应:', response);
+      
+      if (response.code === 200) {
+        onSave(profile);
+        setIsEditing(false);
+        alert('个人资料更新成功！');
+      } else {
+        throw new Error(response.message || '更新失败');
+      }
+    } catch (error: unknown) {
+      console.error('更新个人资料失败:', error);
+      
+      // 显示详细的错误信息
+      let errorMessage = '未知错误';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'object' && error !== null) {
+        const errorObj = error as { message?: string; details?: { status?: number; url?: string } };
+        if (errorObj.message) {
+          errorMessage = errorObj.message;
+        }
+        if (errorObj.details) {
+          errorMessage += `\n\n详细信息:\n状态码: ${errorObj.details.status}\nURL: ${errorObj.details.url}`;
+        }
+      }
+      
+      alert(`更新个人资料失败:\n\n${errorMessage}\n\n请检查:\n1. 是否已登录\n2. 网络连接是否正常\n3. 服务器是否运行`);
+    }
   };
 
   const handleCancel = () => {
@@ -144,7 +200,7 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
                     <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/20 mx-auto mb-4">
                       {profile.avatar ? (
                         <img 
-                          src={profile.avatar} 
+                          src={profile.avatar.startsWith('http') ? profile.avatar : `http://localhost:9292${profile.avatar}`} 
                           alt="头像" 
                           className="w-full h-full object-cover"
                         />

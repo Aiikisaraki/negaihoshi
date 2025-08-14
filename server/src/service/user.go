@@ -28,12 +28,14 @@ var (
 type UserService struct {
 	userRepo *repository.UserRepository
 	crypto   *util.PasswordCrypto
+	storage  AvatarStorage
 }
 
-func NewUserService(userRepo *repository.UserRepository, crypto *util.PasswordCrypto) *UserService {
+func NewUserService(userRepo *repository.UserRepository, crypto *util.PasswordCrypto, storage AvatarStorage) *UserService {
 	return &UserService{
 		userRepo: userRepo,
 		crypto:   crypto,
+		storage:  storage,
 	}
 }
 
