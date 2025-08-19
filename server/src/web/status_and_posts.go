@@ -213,31 +213,23 @@ func (t *StatusAndPostsHandler) GetUserStatusAndPostsMessageList(ctx *gin.Contex
 	return
 }
 func (t *StatusAndPostsHandler) GetStatusAndPostsMessageList(ctx *gin.Context) {
-	type GetMessageListReq struct {
-		IsPost bool `json:"isPost"`
-	}
-	var req GetMessageListReq
-	var err error
-	if err = ctx.Bind(&req); err != nil {
-		ctx.String(http.StatusOK, "系统错误")
-		return
-	}
-	if req.IsPost {
+	// 通过查询参数控制返回文章或动态列表：/api/posts/listAll?isPost=true
+	isPost := ctx.DefaultQuery("isPost", "false") == "true"
+	if isPost {
 		posts, err := t.svc.GetPostsMessageList(ctx)
 		if err != nil {
-			ctx.String(http.StatusOK, "系统错误")
+			SystemError(ctx)
 			return
 		}
-		ctx.JSON(http.StatusOK, posts)
-	} else {
-		status, err := t.svc.GetStatusMessageList(ctx)
-		if err != nil {
-			ctx.String(http.StatusOK, "系统错误")
-			return
-		}
-		ctx.JSON(http.StatusOK, status)
+		SuccessResponse(ctx, posts)
+		return
 	}
-	return
+	status, err := t.svc.GetStatusMessageList(ctx)
+	if err != nil {
+		SystemError(ctx)
+		return
+	}
+	SuccessResponse(ctx, status)
 }
 func (t *StatusAndPostsHandler) DeleteStatusAndPostsMessage(ctx *gin.Context) {
 	type DeleteMessageReq struct {

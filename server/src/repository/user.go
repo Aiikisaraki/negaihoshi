@@ -115,3 +115,8 @@ func (r *UserRepository) GetTotalUserCount(ctx context.Context) (int64, error) {
 	// 实现获取用户总数的逻辑
 	return 0, nil
 }
+
+// UpdateAvatar 只更新头像
+func (r *UserRepository) UpdateAvatar(ctx context.Context, id int64, avatar string) error {
+	return r.userDAO.UpdateAvatar(id, avatar)
+}

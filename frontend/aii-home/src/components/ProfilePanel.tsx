@@ -1,6 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import apiClient, { APIResponse } from '../requests/api';
+import { userApi } from '../requests/posts';
+import { AvatarEditor } from './AvatarEditor';
+import { WordPressPanel } from './WordPressPanel';
 
 interface ProfileData {
   username: string;
@@ -26,6 +29,29 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  // 当外部 profileData 变化时，覆盖内部状态，避免展示旧数据
+  useEffect(() => {
+    setProfile(profileData);
+  }, [profileData]);
+
+  // 打开时拉取最新头像地址，保证与后端同步
+  useEffect(() => {
+    if (!isVisible) return;
+    (async () => {
+      try {
+        const resp = await userApi.getAvatar();
+        if (resp.code === 200 && resp.data?.avatar_url) {
+          setProfile(prev => ({ ...prev, avatar: resp.data!.avatar_url }));
+        }
+      } catch (e) {
+        // 静默失败，不阻塞面板显示
+        console.debug('获取头像失败: ', e);
+      }
+    })();
+  }, [isVisible]);
 
   const handleInputChange = (field: keyof ProfileData, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
@@ -46,69 +72,44 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
       return;
     }
 
+    // 进入本地编辑器
+    setSelectedFile(file);
+    setEditorOpen(true);
+  };
+
+  // 将编辑后的图片上传
+  const uploadEditedBlob = async (blob: Blob) => {
     setIsUploading(true);
     setUploadProgress(0);
-
     try {
-      console.log('开始上传头像:', {
-        fileName: file.name,
-        fileSize: file.size,
-        fileType: file.type
-      });
-
-      // 创建FormData对象用于上传文件
       const formData = new FormData();
-      formData.append('avatar', file);
+      const editedFile = new File([blob], 'avatar_edited.jpg', { type: 'image/jpeg' });
+      formData.append('avatar', editedFile);
 
-      console.log('FormData内容:', {
-        hasAvatar: formData.has('avatar'),
-        avatarFile: formData.get('avatar')
-      });
-
-      // 上传头像到服务器
       const response = await apiClient.post('/users/avatar', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
-            setUploadProgress(progress);
-            console.log('上传进度:', progress + '%');
-          }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => {
+          if (e.total) setUploadProgress(Math.round((e.loaded * 100) / e.total));
         },
       }) as APIResponse<{ avatar_url: string }>;
 
-      console.log('头像上传响应:', response);
-
-      // 上传成功，更新头像URL
       if (response.code === 200 && response.data?.avatar_url) {
-        handleInputChange('avatar', response.data.avatar_url);
+        const newAvatar = response.data.avatar_url;
+        handleInputChange('avatar', newAvatar);
+        // 同步更新到父组件，保证个人中心大头像立即刷新
+        onSave({ ...profile, avatar: newAvatar });
         setUploadProgress(100);
         alert('头像上传成功！');
       } else {
         throw new Error(response.message || '上传失败');
       }
-    } catch (error: unknown) {
+    } catch (error) {
       console.error('头像上传失败:', error);
-      
-      // 显示详细的错误信息
-      let errorMessage = '未知错误';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        const errorObj = error as { message?: string; details?: { status?: number; url?: string } };
-        if (errorObj.message) {
-          errorMessage = errorObj.message;
-        }
-        if (errorObj.details) {
-          errorMessage += `\n\n详细信息:\n状态码: ${errorObj.details.status}\nURL: ${errorObj.details.url}`;
-        }
-      }
-      
-      alert(`头像上传失败:\n\n${errorMessage}\n\n请检查:\n1. 是否已登录\n2. 网络连接是否正常\n3. 服务器是否运行`);
+      alert('头像上传失败，请稍后重试');
     } finally {
       setIsUploading(false);
+      setEditorOpen(false);
+      setSelectedFile(null);
     }
   };
 
@@ -383,11 +384,31 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
                     </div>
                   )}
                 </div>
+
+                {/* WordPress 设置 */}
+                <div className="mt-8">
+                  <h4 className="text-lg font-semibold text-white mb-3">WordPress 设置</h4>
+                  <div className="bg-white/5 rounded-xl p-4 border border-white/10">
+                    <WordPressPanel />
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </motion.div>
+
+      {editorOpen && (
+        <AvatarEditor
+          file={selectedFile}
+          initialUrl={undefined}
+          onCancel={() => {
+            setEditorOpen(false);
+            setSelectedFile(null);
+          }}
+          onConfirm={(blob) => uploadEditedBlob(blob)}
+        />
+      )}
     </motion.div>
   );
 }

@@ -6,8 +6,9 @@
  * @FilePath: \negaihoshi\frontend\aii-home\src\components\Navigation.tsx
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthPanel } from './AuthPanel';
+import { userApi } from '../requests/posts';
 
 interface NavigationProps {
   isLoggedIn: boolean;
@@ -24,6 +25,22 @@ interface NavigationProps {
 export function Navigation({ isLoggedIn, onLoginSuccess, onLogout, onProfileClick, userProfile }: NavigationProps) {
   const [showAuth, setShowAuth] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string | undefined>(userProfile?.avatar);
+
+  // 登录后或导航挂载时尝试获取最新头像
+  useEffect(() => {
+    if (!isLoggedIn) return;
+    (async () => {
+      try {
+        const resp = await userApi.getAvatar();
+        if (resp.code === 200 && resp.data?.avatar_url) {
+          setAvatarUrl(resp.data.avatar_url);
+        }
+      } catch (e) {
+        console.debug('拉取头像失败', e);
+      }
+    })();
+  }, [isLoggedIn]);
 
   return (
     <>
@@ -67,9 +84,9 @@ export function Navigation({ isLoggedIn, onLoginSuccess, onLogout, onProfileClic
                         className="flex items-center space-x-3 bg-white/20 rounded-full px-3 py-2 backdrop-blur-sm border border-white/30 hover:bg-white/30 transition-all duration-200"
                       >
                         <div className="w-8 h-8 rounded-full overflow-hidden border-2 border-white/40">
-                          {userProfile?.avatar ? (
+                          {(avatarUrl || userProfile?.avatar) ? (
                             <img 
-                              src={userProfile.avatar.startsWith('http') ? userProfile.avatar : `http://localhost:9292${userProfile.avatar}`} 
+                              src={(avatarUrl || userProfile?.avatar)!.startsWith('http') ? (avatarUrl || userProfile?.avatar)! : `http://localhost:9292${avatarUrl || userProfile?.avatar}`}
                               alt="头像" 
                               className="w-full h-full object-cover"
                             />

@@ -113,6 +113,15 @@ func (svc *UserService) GetProfile(ctx context.Context, userID int64) (*domain.P
 	}, nil
 }
 
+// UpdateAvatar 保存头像地址到数据库
+func (svc *UserService) UpdateAvatar(ctx context.Context, userID int64, avatarURL string) error {
+	_, err := svc.userRepo.FindById(ctx, userID)
+	if err != nil {
+		return ErrUserNotFound
+	}
+	return svc.userRepo.UpdateAvatar(ctx, userID, avatarURL)
+}
+
 func (svc *UserService) UpdateProfile(ctx context.Context, userID int64, profile *domain.ProfileUpdateRequest) error {
 	// 验证用户是否存在
 	_, err := svc.userRepo.FindById(ctx, userID)
@@ -125,6 +134,15 @@ func (svc *UserService) UpdateProfile(ctx context.Context, userID int64, profile
 
 func (svc *UserService) GetTotalUserCount(ctx context.Context) (int64, error) {
 	return svc.userRepo.GetTotalUserCount(ctx)
+}
+
+// GetAvatarURL 返回用户头像地址
+func (svc *UserService) GetAvatarURL(ctx context.Context, userID int64) (string, error) {
+	user, err := svc.userRepo.FindById(ctx, userID)
+	if err != nil {
+		return "", ErrUserNotFound
+	}
+	return user.Avatar, nil
 }
 
 // 管理后台相关方法

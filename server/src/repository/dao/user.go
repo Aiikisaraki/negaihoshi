@@ -182,3 +182,16 @@ func (dao *UserDAO) UpdateProfile(id int64, profile *domain.ProfileUpdateRequest
 
 	return err
 }
+
+// UpdateAvatar 只更新头像字段，避免覆盖其它资料
+func (dao *UserDAO) UpdateAvatar(id int64, avatar string) error {
+	query := `
+		UPDATE users
+		SET avatar = ?, utime = ?
+		WHERE id = ?
+	`
+
+	now := time.Now()
+	_, err := dao.db.Exec(query, avatar, now, id)
+	return err
+}

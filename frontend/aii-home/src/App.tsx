@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom';
 import { Navigation } from './components/Navigation';
 import { Timeline } from './components/Timeline';
 import { EditorPanel } from './components/EditorPanel';
-import { WordPressPanel } from './components/WordPressPanel';
 import { ProfilePage } from './pages/ProfilePage';
+import { CreatePostPage } from './pages/CreatePostPage';
+import { CreateStatusPage } from './pages/CreateStatusPage';
+import { PostDetailPage } from './pages/PostDetailPage';
+import { StatusDetailPage } from './pages/StatusDetailPage';
 import { BackgroundSettings } from './components/BackgroundSettings';
 import apiClient, { APIResponse } from './requests/api';
 
@@ -27,7 +30,7 @@ interface ProfileData {
 function AppContent() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [currentTab, setCurrentTab] = useState<'home' | 'wordpress'>('home');
+  const [currentTab, setCurrentTab] = useState<'home'>('home');
   const [profileData, setProfileData] = useState<ProfileData>({
     username: '',
     email: '',
@@ -157,54 +160,41 @@ function AppContent() {
           <div className="main-content-glass rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl w-full max-w-6xl">
             {/* 标题和标签页区域 */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 space-y-4 sm:space-y-0">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-blue-800 text-center sm:text-left">星の海の物語</h1>
-              
-              {isLoggedIn && (
-                <div className="flex flex-wrap justify-center sm:justify-end space-x-3 space-y-2 sm:space-y-0">
-                  <button
-                    onClick={() => setCurrentTab('home')}
-                    className={`px-4 sm:px-6 py-3 rounded-xl transition-all duration-200 text-sm sm:text-base font-medium ${
-                      currentTab === 'home' 
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg' 
-                        : 'bg-white/30 text-blue-700 hover:bg-white/50 border border-white/40'
-                    }`}
-                  >
-                    树洞
-                  </button>
-                  <button
-                    onClick={() => setCurrentTab('wordpress')}
-                    className={`px-4 sm:px-6 py-3 rounded-xl transition-all duration-200 text-sm sm:text-base font-medium ${
-                      currentTab === 'wordpress' 
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg' 
-                        : 'bg-white/30 text-blue-700 hover:bg-white/50 border border-white/40'
-                    }`}
-                  >
-                    WordPress
-                  </button>
-                </div>
-              )}
+              <div></div> {/* 保留空div以保持布局结构 */}
+              <div className="flex items-center gap-3">
+                {/* 移除说说管理和文章管理入口 */}
+              </div>
             </div>
 
             {/* 内容区域 */}
             {currentTab === 'home' ? (
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 sm:gap-8">
-                <Section title="最新动态">
-                  <Timeline refreshTrigger={refreshTrigger} />
-                </Section>
-                <Section title={isLoggedIn ? "创作空间" : "游客模式"}>
-                  {isLoggedIn ? (
-                    <EditorPanel onPostSuccess={handlePostSuccess} />
-                  ) : (
-                    <div className="text-center p-8 sm:p-10 text-blue-700">
-                      <p className="mb-4 text-lg sm:text-xl">登录后即可发布动态</p>
-                      <p className="text-base sm:text-lg text-blue-600">在星空下分享你的心情和想法</p>
-                    </div>
-                  )}
-                </Section>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+                {/* 主体：文章列表（2列宽） */}
+                <div className="lg:col-span-2 space-y-6">
+                  <Section title="文章精选">
+                    {/* TODO: 文章列表组件（Markdown 摘要渲染） */}
+                    <div className="text-blue-700">这里将展示用户发布的文章列表（支持 Markdown 摘要）。</div>
+                  </Section>
+                </div>
+
+                {/* 右侧栏：树洞与发布树洞 */}
+                <div className="lg:col-span-1 space-y-6">
+                  <Section title="树洞">
+                    <Timeline refreshTrigger={refreshTrigger} />
+                  </Section>
+                  <Section title={isLoggedIn ? "发布树洞" : "游客模式"}>
+                    {isLoggedIn ? (
+                      <EditorPanel onPostSuccess={handlePostSuccess} />
+                    ) : (
+                      <div className="text-center p-8 sm:p-10 text-blue-700">
+                        <p className="mb-4 text-lg sm:text-xl">登录后即可发布树洞</p>
+                        <p className="text-base sm:text-lg text-blue-600">在星空下分享你的心情和想法</p>
+                      </div>
+                    )}
+                  </Section>
+                </div>
               </div>
-            ) : (
-              <WordPressPanel />
-            )}
+            ) : null}
           </div>
         </main>
 
@@ -292,6 +282,56 @@ export default function App() {
               </div>
             )
           } 
+        />
+        <Route 
+          path="/create-post" 
+          element={
+            isLoggedIn ? (
+              <CreatePostPage />
+            ) : (
+              <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50 flex items-center justify-center">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
+                  <p className="text-blue-600 mb-6">登录后即可创建文章</p>
+                  <button
+                    onClick={() => window.location.href = '/'}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
+                  >
+                    返回首页
+                  </button>
+                </div>
+              </div>
+            )
+          } 
+        />
+        <Route 
+          path="/create-status" 
+          element={
+            isLoggedIn ? (
+              <CreateStatusPage />
+            ) : (
+              <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50 flex items-center justify-center">
+                <div className="text-center">
+                  <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
+                  <p className="text-blue-600 mb-6">登录后即可发布说说</p>
+                  <button
+                    onClick={() => window.location.href = '/'}
+                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
+                  >
+                    返回首页
+                  </button>
+                </div>
+              </div>
+            )
+          } 
+        />
+        <Route 
+          path="/post/:id" 
+          element={<PostDetailPage />} 
+        />
+        <Route 
+          path="/status/:id" 
+          element={<StatusDetailPage />} 
         />
       </Routes>
     </Router>

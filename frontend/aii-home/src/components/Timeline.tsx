@@ -27,7 +27,25 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
       const response = await treeholeApi.getList(pageNum, 10);
       
       if (response.code === 200) {
-        const newMessages = response.data.messages || [];
+        const raw = (response.data as unknown as { messages?: unknown[] })?.messages || [];
+
+        // 兼容后端字段大小写（Id/Content/UserId/Ctime）
+        const toMessage = (m: unknown): TreeHoleMessage => {
+          const r = m as Record<string, unknown>;
+          const id = (r.id ?? r.Id) as number | undefined;
+          const content = (r.content ?? r.Content) as string | undefined;
+          const userId = (r.userId ?? r.UserId) as number | undefined;
+          const ctimeRaw = (r.ctime ?? r.Ctime) as unknown;
+          const ctime = typeof ctimeRaw === 'string' ? ctimeRaw : (ctimeRaw ? String(ctimeRaw) : '');
+          return {
+            id: id ?? 0,
+            content: content ?? '',
+            userId: userId ?? 0,
+            ctime,
+          };
+        };
+
+        const newMessages = raw.map(toMessage);
         
         if (reset) {
           setMessages(newMessages);

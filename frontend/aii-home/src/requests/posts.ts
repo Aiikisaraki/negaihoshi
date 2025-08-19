@@ -9,7 +9,7 @@
 import apiClient from "./api";
 
 // API响应接口
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
   data: T;
@@ -28,6 +28,20 @@ export interface PaginatedResponse<T> {
   messages: T[];
   page: number;
   size: number;
+}
+
+// 文章与说说类型
+export interface PostItem {
+  id: number;
+  title: string;
+  content: string;
+  userId: number;
+}
+
+export interface StatusItem {
+  id: number;
+  content: string;
+  userId: number;
 }
 
 // 树洞API
@@ -58,21 +72,83 @@ export const treeholeApi = {
   }
 };
 
+// 文章/说说 API（登录后使用）
+export const postApi = {
+  // 创建文章
+  createPost: async (title: string, content: string, transferToWP: boolean = false): Promise<ApiResponse<unknown>> => {
+    return apiClient.post('/posts/create', {
+      title,
+      content,
+      isTransferToWordPress: transferToWP,
+      isPost: true
+    });
+  },
+  // 创建说说
+  createStatus: async (content: string, transferToWP: boolean = false): Promise<ApiResponse<unknown>> => {
+    return apiClient.post('/posts/create', {
+      title: '',
+      content,
+      isTransferToWordPress: transferToWP,
+      isPost: false
+    });
+  },
+  // 获取文章列表
+  getPostsList: async (): Promise<ApiResponse<PostItem[] | { posts?: PostItem[] }>> => {
+    return apiClient.get('/posts/listAll?isPost=true');
+  },
+  // 获取说说列表
+  getStatusList: async (): Promise<ApiResponse<StatusItem[] | { status?: StatusItem[] }>> => {
+    return apiClient.get('/posts/listAll?isPost=false');
+  },
+  // 编辑文章
+  editPost: async (id: number, title: string, content: string, transferToWP: boolean = false): Promise<ApiResponse<unknown>> => {
+    return apiClient.patch('/posts/edit', {
+      id,
+      title,
+      content,
+      isTransferToWordPress: transferToWP,
+      isPost: true
+    });
+  },
+  // 编辑说说
+  editStatus: async (id: number, content: string, transferToWP: boolean = false): Promise<ApiResponse<unknown>> => {
+    return apiClient.patch('/posts/edit', {
+      id,
+      title: '',
+      content,
+      isTransferToWordPress: transferToWP,
+      isPost: false
+    });
+  }
+};
+
 // 用户认证API
 export const authApi = {
   // 用户登录
-  login: async (username: string, password: string): Promise<ApiResponse<any>> => {
+  login: async (username: string, password: string): Promise<ApiResponse<{ user_id: number; username: string; email: string }>> => {
     return apiClient.post('/users/login', { username, password });
   },
 
   // 用户注册
-  register: async (username: string, password: string, email: string): Promise<ApiResponse<any>> => {
+  register: async (username: string, password: string, email: string): Promise<ApiResponse<unknown>> => {
     return apiClient.post('/users/signup', { username, password, email });
   },
 
   // 用户注销
   logout: async (): Promise<ApiResponse<null>> => {
     return apiClient.post('/users/logout');
+  }
+};
+
+// 用户资料API
+export const userApi = {
+  // 获取当前用户头像地址
+  getAvatar: async (): Promise<ApiResponse<{ avatar_url: string }>> => {
+    return apiClient.get('/users/avatar');
+  },
+  // 获取个人资料
+  getProfile: async (): Promise<ApiResponse<{ id: number; username: string; email: string; nickname: string; bio: string; avatar: string; phone: string; location: string; website: string; ctime: string; utime: string }>> => {
+    return apiClient.get('/users/profile');
   }
 };
 
@@ -94,7 +170,7 @@ export const wordpressApi = {
     api_key: string;
     site_name?: string;
     wp_user_id?: number;
-  }): Promise<ApiResponse<any>> => {
+  }): Promise<ApiResponse<unknown>> => {
     return apiClient.post('/wordpress/bind', siteData);
   },
 
@@ -116,7 +192,7 @@ export const wordpressApi = {
     title?: string;
     as_private?: boolean;
     add_signature?: boolean;
-  }): Promise<ApiResponse<any>> => {
+  }): Promise<ApiResponse<{ success?: boolean }>> => {
     return apiClient.post('/wordpress/transfer', transferData);
   }
 };

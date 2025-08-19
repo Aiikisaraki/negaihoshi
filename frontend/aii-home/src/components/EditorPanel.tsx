@@ -1,3 +1,11 @@
+/*
+ * @Author: Aii如樱如月 morikawa@kimisui56.work
+ * @Date: 2025-07-26 20:27:08
+ * @LastEditors: Aii如樱如月 morikawa@kimisui56.work
+ * @LastEditTime: 2025-08-20 01:04:41
+ * @FilePath: \negaihoshi\frontend\aii-home\src\components\EditorPanel.tsx
+ * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ */
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { treeholeApi } from '../requests/posts';
@@ -17,11 +25,6 @@ export const EditorPanel = ({ onPostSuccess }: EditorPanelProps) => {
       return;
     }
 
-    if (content.length > 1000) {
-      setError('内容不能超过1000字符');
-      return;
-    }
-
     setIsLoading(true);
     setError('');
 
@@ -29,7 +32,7 @@ export const EditorPanel = ({ onPostSuccess }: EditorPanelProps) => {
       const response = await treeholeApi.create(content.trim());
       
       if (response.code === 200) {
-        setContent(''); // 清空输入框
+        setContent('');
         onPostSuccess?.(); // 通知父组件刷新列表
       } else {
         setError(response.message || '发布失败');
@@ -55,12 +58,9 @@ export const EditorPanel = ({ onPostSuccess }: EditorPanelProps) => {
       animate={{ scale: 1 }}
       className="space-y-6 p-6 rounded-2xl bg-white/20 border border-white/30 backdrop-blur-xl shadow-lg"
     >
-      <div className="flex justify-between items-center">
-        <div className="flex space-x-2">
-          {/* 功能按钮预留位置 */}
-        </div>
+      <div className="flex flex-wrap justify-between items-center gap-3">
         <div className="text-sm text-blue-600">
-          {content.length}/1000 字符 • Ctrl+Enter 快速发布
+          Ctrl+Enter 快速发布
         </div>
       </div>
       
@@ -80,7 +80,7 @@ export const EditorPanel = ({ onPostSuccess }: EditorPanelProps) => {
                  text-blue-800 placeholder-blue-500/60 
                  focus:outline-none focus:ring-2 focus:ring-purple-500/30
                  disabled:opacity-50 disabled:cursor-not-allowed resize-none text-base"
-        placeholder="分享你的心情... (支持 Ctrl+Enter 快速发布)"
+        placeholder={'分享你的心情... (树洞，纯文本)'}
       />
       
       <div className="flex justify-end">
@@ -92,7 +92,7 @@ export const EditorPanel = ({ onPostSuccess }: EditorPanelProps) => {
                    disabled:opacity-50 disabled:cursor-not-allowed
                    transition-all duration-200 shadow-lg transform hover:scale-105"
         >
-          {isLoading ? '发布中...' : '发布动态'}
+          {isLoading ? '发布中...' : '发布树洞'}
         </button>
       </div>
     </motion.div>

@@ -54,6 +54,7 @@ func (h *UserHandler) RegisterUserRoutes(server *gin.Engine) {
 	ug.GET("/profile", h.GetProfile)
 	ug.PUT("/profile", h.UpdateProfile)
 	ug.POST("/avatar", h.UploadAvatar) // 添加头像上传接口
+	ug.GET("/avatar", h.GetAvatar)     // 获取头像地址接口
 
 	// 管理后台相关路由
 	adminGroup := server.Group("/api/admin")
@@ -342,6 +343,15 @@ func (h *UserHandler) UploadAvatar(c *gin.Context) {
 		return
 	}
 
+	// 将头像地址保存到数据库
+	if err := h.userService.UpdateAvatar(c.Request.Context(), userID, avatarURL); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "更新头像地址失败: " + err.Error(),
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "头像上传成功",
@@ -403,6 +413,44 @@ func (h *UserHandler) GetUserList(c *gin.Context) {
 			"page":      page,
 			"page_size": pageSize,
 			"total":     len(users),
+		},
+	})
+}
+
+// GetAvatar 返回当前登录用户的头像地址
+func (h *UserHandler) GetAvatar(c *gin.Context) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "请先登录",
+		})
+		return
+	}
+
+	userID, ok := userIDInterface.(int64)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "用户ID类型错误",
+		})
+		return
+	}
+
+	avatar, err := h.userService.GetAvatarURL(c.Request.Context(), userID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"code":    500,
+			"message": "获取头像失败: " + err.Error(),
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data": gin.H{
+			"avatar_url": avatar,
 		},
 	})
 }
