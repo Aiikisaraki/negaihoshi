@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { userApi, postApi } from '../requests/posts';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ProfilePanel } from '../components/ProfilePanel';
 import apiClient from '../requests/api';
+import AvatarImage from '../components/AvatarImage';
+import { interactApi } from '../requests/interact';
 
 // 个人资料数据类型
 interface ProfileData {
@@ -42,21 +44,51 @@ interface ProfilePageProps {
 }
 
 export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) {
+  const params = useParams();
+  const routeUserId = params.id ? parseInt(params.id, 10) : undefined;
+  const location = useLocation();
   const [showEditPanel, setShowEditPanel] = useState(false);
   const [viewProfile, setViewProfile] = useState<ProfileData>(profileData);
-  const [activeTab, setActiveTab] = useState<'profile' | 'posts' | 'status'>('profile');
+  const [activeTab, setActiveTab] = useState<'posts' | 'status'>('posts');
   const [posts, setPosts] = useState<PostItem[]>([]);
   const [statusList, setStatusList] = useState<StatusItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [followingCount, setFollowingCount] = useState<number>(0);
+  const [followersCount, setFollowersCount] = useState<number>(0);
+  const [totalLikesReceived, setTotalLikesReceived] = useState<number>(0);
   const navigate = useNavigate();
 
-  // 当父级的资料变化时，同步到本地显示，保证头像等信息即时更新
-  useEffect(() => {
-    setViewProfile(profileData);
-  }, [profileData]);
+  const isOwner = !routeUserId || (viewProfile.id && routeUserId === viewProfile.id);
 
-  // 初次加载或头像缺失时，主动拉取最新头像地址
+  // 当路由变化或登录用户资料变化时，决定展示哪个用户的资料
   useEffect(() => {
+    (async () => {
+      try {
+        if (routeUserId && (!profileData.id || routeUserId !== profileData.id)) {
+          const resp = await userApi.getProfileById(routeUserId);
+          if (resp.code === 200 && resp.data) {
+            setViewProfile(resp.data as ProfileData);
+          }
+        } else {
+          setViewProfile(profileData);
+        }
+      } catch (e) {
+        console.debug('加载用户资料失败', e);
+      }
+    })();
+  }, [routeUserId, profileData]);
+
+  // ?edit=1 时打开编辑面板（仅自己）
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('edit') === '1' && (!routeUserId || routeUserId === profileData.id)) {
+      setShowEditPanel(true);
+    }
+  }, [location.search, routeUserId, profileData.id]);
+
+  // 初次加载或头像缺失时，主动拉取最新头像地址（仅自己）
+  useEffect(() => {
+    if (!isOwner) return;
     if (!viewProfile.avatar) {
       (async () => {
         try {
@@ -65,15 +97,15 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
             setViewProfile(prev => ({ ...prev, avatar: resp.data!.avatar_url }));
           }
         } catch (e) {
-          // 忽略错误，界面仍可用
           console.debug('获取头像失败', e);
         }
       })();
     }
-  }, [viewProfile.avatar]);
+  }, [isOwner, viewProfile.avatar]);
 
-  // 编辑面板关闭后，拉取一次头像，确保页面头像最新
+  // 编辑面板关闭后，拉取一次头像，确保页面头像最新（仅自己）
   useEffect(() => {
+    if (!isOwner) return;
     if (!showEditPanel) {
       (async () => {
         try {
@@ -84,7 +116,22 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
         } catch {}
       })();
     }
-  }, [showEditPanel]);
+  }, [isOwner, showEditPanel]);
+
+  // 关注/粉丝数
+  useEffect(() => {
+    (async () => {
+      if (!viewProfile.id) return;
+      try {
+        const [followingResp, followersResp] = await Promise.all([
+          interactApi.countFollowing(viewProfile.id),
+          interactApi.countFollowers(viewProfile.id),
+        ]);
+        if (followingResp.code === 200) setFollowingCount(followingResp.data.count || 0);
+        if (followersResp.code === 200) setFollowersCount(followersResp.data.count || 0);
+      } catch {}
+    })();
+  }, [viewProfile.id]);
 
   // 获取用户的文章列表
   const fetchPosts = async () => {
@@ -93,8 +140,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
       const resp: any = await apiClient.get('/posts/listAll?isPost=true');
       if (resp.code === 200) {
         const postsData = Array.isArray(resp.data) ? resp.data : resp.data.posts || [];
-        // 过滤当前用户的文章
-        const userPosts = postsData.filter((post: any) => post.userId === profileData.id);
+        const userPosts = postsData.filter((post: any) => post.userId === viewProfile.id);
         setPosts(userPosts);
       }
     } catch (error) {
@@ -111,8 +157,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
       const resp: any = await apiClient.get('/posts/listAll?isPost=false');
       if (resp.code === 200) {
         const statusData = Array.isArray(resp.data) ? resp.data : resp.data.status || [];
-        // 过滤当前用户的说说
-        const userStatus = statusData.filter((status: any) => status.userId === profileData.id);
+        const userStatus = statusData.filter((status: any) => status.userId === viewProfile.id);
         setStatusList(userStatus);
       }
     } catch (error) {
@@ -124,18 +169,33 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
 
   // 切换标签页时加载对应数据
   useEffect(() => {
+    if (!viewProfile.id) return;
     if (activeTab === 'posts') {
       fetchPosts();
     } else if (activeTab === 'status') {
       fetchStatus();
     }
-  }, [activeTab]);
+  }, [activeTab, viewProfile.id]);
+
+  // 计算被点赞总数（文章 + 说说）
+  useEffect(() => {
+    (async () => {
+      if (!viewProfile.id) return;
+      try {
+        const postLikes = await Promise.all(posts.map(p => interactApi.likeCount(p.id, true)));
+        const statusLikes = await Promise.all(statusList.map(s => interactApi.likeCount(s.id, false)));
+        const sum = postLikes.reduce((acc, r) => acc + ((r.code === 200 && r.data && (r.data as any).count) ? (r.data as any).count : 0), 0)
+          + statusLikes.reduce((acc, r) => acc + ((r.code === 200 && r.data && (r.data as any).count) ? (r.data as any).count : 0), 0);
+        setTotalLikesReceived(sum);
+      } catch (e) {
+        console.debug('计算被点赞数失败', e);
+      }
+    })();
+  }, [posts, statusList, viewProfile.id]);
 
   const handleProfileSave = async (data: ProfileData) => {
     try {
-      // 调用父组件的更新方法
       onProfileUpdate(data);
-      // 先本地刷新，确保大头像等即时更新
       setViewProfile(data);
       setShowEditPanel(false);
     } catch (error) {
@@ -143,30 +203,111 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
     }
   };
 
+  // 互动操作 - 说说
+  const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
+  const [statusComments, setStatusComments] = useState<Record<number, Array<{ id: number; content: string; user_id: number; ctime: number }>>>({});
+  const [statusCommentText, setStatusCommentText] = useState<Record<number, string>>({});
+  const [statusLikeCount, setStatusLikeCount] = useState<Record<number, number>>({});
+  const [likingStatus, setLikingStatus] = useState<Record<number, boolean>>({});
+
+  const toggleComments = async (sid: number) => {
+    const opened = openComments[sid];
+    const next = { ...openComments, [sid]: !opened };
+    setOpenComments(next);
+    if (!opened) {
+      try {
+        const likeResp = await interactApi.likeCount(sid, false);
+        if (likeResp.code === 200) setStatusLikeCount(prev => ({ ...prev, [sid]: (likeResp.data as any).count || 0 }));
+        const commentsResp = await interactApi.listComments(sid, false, 1, 20);
+        if (commentsResp.code === 200) {
+          const items = (commentsResp.data.comments || []) as any[];
+          setStatusComments(prev => ({ ...prev, [sid]: items.map(i => ({ id: i.id, content: i.content, user_id: i.user_id, ctime: i.ctime })) }));
+        }
+      } catch (e) { console.debug('加载说说互动失败', e); }
+    }
+  };
+
+  const likeStatus = async (sid: number) => {
+    if (likingStatus[sid]) return;
+    setLikingStatus(prev => ({ ...prev, [sid]: true }));
+    try {
+      await interactApi.like(sid, false);
+      const likeResp = await interactApi.likeCount(sid, false);
+      if (likeResp.code === 200) setStatusLikeCount(prev => ({ ...prev, [sid]: (likeResp.data as any).count || 0 }));
+    } catch (e) { console.debug('点赞失败', e); }
+    finally { setLikingStatus(prev => ({ ...prev, [sid]: false })); }
+  };
+
+  const unlikeStatus = async (sid: number) => {
+    if (likingStatus[sid]) return;
+    setLikingStatus(prev => ({ ...prev, [sid]: true }));
+    try {
+      await interactApi.unlike(sid, false);
+      const likeResp = await interactApi.likeCount(sid, false);
+      if (likeResp.code === 200) setStatusLikeCount(prev => ({ ...prev, [sid]: (likeResp.data as any).count || 0 }));
+    } catch (e) { console.debug('取消点赞失败', e); }
+    finally { setLikingStatus(prev => ({ ...prev, [sid]: false })); }
+  };
+
+  const sendStatusComment = async (sid: number) => {
+    const text = (statusCommentText[sid] || '').trim();
+    if (!text) return;
+    try {
+      await interactApi.addComment(sid, false, text);
+      const commentsResp = await interactApi.listComments(sid, false, 1, 20);
+      if (commentsResp.code === 200) {
+        const items = (commentsResp.data.comments || []) as any[];
+        setStatusComments(prev => ({ ...prev, [sid]: items.map(i => ({ id: i.id, content: i.content, user_id: i.user_id, ctime: i.ctime })) }));
+      }
+      setStatusCommentText(prev => ({ ...prev, [sid]: '' }));
+    } catch (e) { console.debug('评论失败', e); }
+  };
+
+  const followUser = async (uid: number) => {
+    if (!uid) return;
+    try {
+      await interactApi.follow(uid);
+      if (viewProfile.id) {
+        const [followingResp, followersResp] = await Promise.all([
+          interactApi.countFollowing(viewProfile.id),
+          interactApi.countFollowers(viewProfile.id),
+        ]);
+        if (followingResp.code === 200) setFollowingCount(followingResp.data.count || 0);
+        if (followersResp.code === 200) setFollowersCount(followersResp.data.count || 0);
+      }
+    } catch (e) { console.debug('关注失败', e); }
+  };
+  const unfollowUser = async (uid: number) => {
+    if (!uid) return;
+    try {
+      await interactApi.unfollow(uid);
+      if (viewProfile.id) {
+        const [followingResp, followersResp] = await Promise.all([
+          interactApi.countFollowing(viewProfile.id),
+          interactApi.countFollowers(viewProfile.id),
+        ]);
+        if (followingResp.code === 200) setFollowingCount(followingResp.data.count || 0);
+        if (followersResp.code === 200) setFollowersCount(followersResp.data.count || 0);
+      }
+    } catch (e) { console.debug('取消关注失败', e); }
+  };
+
+  const dynamicsCount = posts.length + statusList.length;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50">
       {/* 顶部导航栏 */}
       <div className="w-full bg-white/70 backdrop-blur-md border-b border-white/60">
-        <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
           <h1 className="text-xl font-semibold text-blue-800">个人中心</h1>
           <Link to="/" className="text-blue-600 hover:text-blue-700 transition-colors">返回首页</Link>
         </div>
       </div>
 
-      <div className="w-full max-w-4xl p-4 mx-auto">
-        {/* 个人中心导航栏 */}
+      <div className="w-full max-w-6xl p-4 mx-auto">
+        {/* 顶部标签（右侧主体区的切换） */}
         <div className="bg-white/80 backdrop-blur-xl rounded-2xl p-2 shadow-lg border border-white/40 mb-6">
           <div className="flex space-x-1">
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
-                activeTab === 'profile'
-                  ? 'bg-blue-500 text-white shadow-md'
-                  : 'text-blue-600 hover:bg-blue-100'
-              }`}
-            >
-              个人资料
-            </button>
             <button
               onClick={() => setActiveTab('posts')}
               className={`px-6 py-3 rounded-xl font-medium transition-all duration-200 ${
@@ -175,7 +316,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
                   : 'text-blue-600 hover:bg-blue-100'
               }`}
             >
-              文章管理
+              文章
             </button>
             <button
               onClick={() => setActiveTab('status')}
@@ -185,270 +326,189 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
                   : 'text-blue-600 hover:bg-blue-100'
               }`}
             >
-              说说管理
+              说说
             </button>
           </div>
         </div>
 
-        {/* 个人资料卡片 */}
-        {activeTab === 'profile' && (
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/40 mb-8">
-            {/* 头像（左） + 基本信息（右，纵向） */}
-            <div className="grid grid-cols-1 md:grid-cols-2 items-center justify-items-center gap-6 md:gap-12 mb-8 max-w-3xl mx-auto">
-              {/* 左侧头像 */}
-              <div className="flex-shrink-0 justify-self-center md:justify-self-end">
-                <div className="w-40 h-40 md:w-48 md:h-48 rounded-full overflow-hidden border-6 border-blue-200 shadow-lg">
-                  {viewProfile.avatar ? (
-                    <img 
-                      src={viewProfile.avatar.startsWith('http') ? viewProfile.avatar : `http://localhost:9292${viewProfile.avatar}`} 
-                      alt="头像" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center">
-                      <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                      </svg>
-                    </div>
+        {/* 主体两栏布局 */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* 左侧侧边栏：基本信息 + 其他信息 + 统计 + 操作 */}
+          <div className="space-y-6 md:col-span-1">
+            <div className="bg-white/80 rounded-2xl p-6 backdrop-blur-xl border border-white/40">
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-20 h-20 rounded-full overflow-hidden border-4 border-blue-200 shadow">
+                  <AvatarImage src={viewProfile.avatar} className="w-full h-full object-cover" />
+                </div>
+                <div>
+                  <div className="text-xl font-bold text-blue-800">{viewProfile.nickname || viewProfile.username}</div>
+                  <div className="text-sm text-blue-600">{viewProfile.email}</div>
+                </div>
+              </div>
+              {isOwner ? (
+                <button onClick={() => setShowEditPanel(true)} className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700">编辑个人信息</button>
+              ) : (
+                <div className="flex gap-2">
+                  <button onClick={() => followUser(viewProfile.id!)} className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">关注</button>
+                  <button onClick={() => unfollowUser(viewProfile.id!)} className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-xl hover:bg-gray-600">取消关注</button>
+                </div>
+              )}
+              {/* 统计 */}
+              <div className="mt-5 grid grid-cols-4 gap-3">
+                <div className="bg-white border border-blue-100 rounded-xl p-3 text-center">
+                  <div className="text-xs text-blue-500">动态</div>
+                  <div className="text-xl font-bold text-blue-800">{dynamicsCount}</div>
+                </div>
+                <div className="bg-white border border-blue-100 rounded-xl p-3 text-center">
+                  <div className="text-xs text-blue-500">被点赞</div>
+                  <div className="text-xl font-bold text-blue-800">{totalLikesReceived}</div>
+                </div>
+                <div className="bg-white border border-blue-100 rounded-xl p-3 text-center">
+                  <div className="text-xs text-blue-500">粉丝</div>
+                  <div className="text-xl font-bold text-blue-800">{followersCount}</div>
+                </div>
+                <div className="bg-white border border-blue-100 rounded-xl p-3 text-center">
+                  <div className="text-xs text-blue-500">关注</div>
+                  <div className="text-xl font-bold text-blue-800">{followingCount}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white/80 rounded-2xl p-6 backdrop-blur-xl border border-white/40">
+              <h3 className="text-lg font-semibold text-blue-800 mb-4">基本信息</h3>
+              <div className="space-y-3 text-blue-800">
+                <div className="flex justify-between"><span className="text-blue-600">用户名</span><span className="font-semibold">{viewProfile.username}</span></div>
+                <div className="flex justify-between"><span className="text-blue-600">昵称</span><span className="font-semibold">{viewProfile.nickname || '未设置'}</span></div>
+                <div className="flex justify-between"><span className="text-blue-600">邮箱</span><span className="font-semibold">{viewProfile.email}</span></div>
+                <div className="flex justify-between"><span className="text-blue-600">手机</span><span className="font-semibold">{viewProfile.phone || '未设置'}</span></div>
+              </div>
+            </div>
+
+            <div className="bg-white/80 rounded-2xl p-6 backdrop-blur-xl border border-white/40">
+              <h3 className="text-lg font-semibold text-blue-800 mb-4">其他信息</h3>
+              <div className="space-y-3 text-blue-800">
+                <div className="flex justify-between"><span className="text-blue-600">位置</span><span className="font-semibold">{viewProfile.location || '未设置'}</span></div>
+                <div className="flex justify-between"><span className="text-blue-600">网站</span><span className="font-semibold">{viewProfile.website || '未设置'}</span></div>
+              </div>
+            </div>
+          </div>
+
+          {/* 右侧主体：文章或说说列表 */}
+          <div className="md:col-span-2 space-y-6">
+            {activeTab === 'posts' && (
+              <div className="bg-white/80 rounded-2xl p-6 backdrop-blur-xl border border-white/40">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-blue-800">文章</h2>
+                  {isOwner && (
+                    <button onClick={() => navigate('/create-post')} className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700">创建文章</button>
                   )}
                 </div>
-              </div>
-
-              {/* 右侧纵向信息 */}
-              <div className="w-[360px] max-w-full justify-self-center md:justify-self-start text-center md:text-left">
-                <h2 className="text-3xl font-bold text-blue-800 mb-3">
-                  {viewProfile.nickname || viewProfile.username}
-                </h2>
-                <p className="text-lg text-blue-600 mb-6 max-w-2xl">
-                  {viewProfile.bio || '这个人很懒，什么都没有留下...'}
-                </p>
-                <button
-                  onClick={() => setShowEditPanel(true)}
-                  className="px-8 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl text-white transition-all duration-200 transform hover:scale-105 active:scale-95 font-medium shadow-lg"
-                >
-                  编辑个人资料
-                </button>
-              </div>
-            </div>
-
-            {/* 详细信息网格 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* 基本信息 */}
-              <div className="bg-white/60 rounded-2xl p-6 backdrop-blur-sm border border-white/50">
-                <h3 className="text-xl font-semibold text-blue-800 mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  基本信息
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                    <span className="text-blue-600 font-medium">用户名</span>
-                    <span className="text-blue-800 font-semibold">{viewProfile.username}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                    <span className="text-blue-600 font-medium">邮箱</span>
-                    <span className="text-blue-800 font-semibold">{viewProfile.email}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                    <span className="text-blue-600 font-medium">昵称</span>
-                    <span className="text-blue-800 font-semibold">{viewProfile.nickname || '未设置'}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                    <span className="text-blue-600 font-medium">手机</span>
-                    <span className="text-blue-800 font-semibold">{viewProfile.phone || '未设置'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* 其他信息 */}
-              <div className="bg-white/60 rounded-2xl p-6 backdrop-blur-sm border border-white/50">
-                <h3 className="text-xl font-semibold text-blue-800 mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  其他信息
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                    <span className="text-blue-600 font-medium">位置</span>
-                    <span className="text-blue-800 font-semibold">{viewProfile.location || '未设置'}</span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                    <span className="text-blue-600 font-medium">网站</span>
-                    <span className="text-blue-800 font-semibold">
-                      {viewProfile.website ? (
-                        <a 
-                          href={viewProfile.website} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="text-blue-600 hover:text-blue-500 underline"
-                        >
-                          {viewProfile.website}
-                        </a>
-                      ) : (
-                        '未设置'
-                      )}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                    <span className="text-blue-600 font-medium">注册时间</span>
-                    <span className="text-blue-800 font-semibold">
-                      {viewProfile.ctime ? new Date(viewProfile.ctime).toLocaleDateString('zh-CN') : '未知'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center py-2 border-b border-blue-100">
-                    <span className="text-blue-600 font-medium">最后更新</span>
-                    <span className="text-blue-800 font-semibold">
-                      {viewProfile.utime ? new Date(viewProfile.utime).toLocaleDateString('zh-CN') : '未知'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 文章管理 */}
-        {activeTab === 'posts' && (
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/40 mb-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-blue-800">文章管理</h2>
-              <button
-                onClick={() => navigate('/create-post')}
-                className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl text-white transition-all duration-200 font-medium shadow-lg"
-              >
-                创建新文章
-              </button>
-            </div>
-            
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                <p className="mt-2 text-blue-600">加载中...</p>
-              </div>
-            ) : posts.length === 0 ? (
-              <div className="text-center py-8">
-                <svg className="w-16 h-16 mx-auto text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p className="mt-4 text-blue-600">暂无文章</p>
-                <button
-                  onClick={() => navigate('/create-post')}
-                  className="mt-4 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl text-white transition-all duration-200 font-medium shadow-lg"
-                >
-                  创建第一篇文章
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {posts.map((post) => (
-                  <div key={post.id} className="bg-white/60 rounded-2xl p-6 backdrop-blur-sm border border-white/50 hover:shadow-md transition-shadow">
-                    <h3 className="text-xl font-semibold text-blue-800 mb-2">{post.title}</h3>
-                    <p className="text-blue-600 mb-4 line-clamp-2">{post.content}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-blue-400">
-                        {post.ctime ? new Date(post.ctime).toLocaleDateString('zh-CN') : '未知时间'}
-                      </span>
-                      <div className="space-x-2">
-                        <button className="px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                          编辑
-                        </button>
-                        <button className="px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                          删除
-                        </button>
+                {loading ? (
+                  <div className="text-center py-6">加载中...</div>
+                ) : posts.length === 0 ? (
+                  <div className="text-center py-6">暂无文章</div>
+                ) : (
+                  <div className="space-y-4">
+                    {posts.map((post) => (
+                      <div key={post.id} className="bg-white rounded-xl p-4 border border-blue-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <h3 className="text-lg font-semibold text-blue-800">{post.title}</h3>
+                          <div className="flex items-center gap-2 text-sm">
+                            {post.userId !== viewProfile.id && (
+                              <>
+                                <button onClick={() => followUser(post.userId)} className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600">关注作者</button>
+                                <button onClick={() => unfollowUser(post.userId)} className="px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600">取消关注</button>
+                              </>
+                            )}
+                            <button onClick={async () => { try { await interactApi.like(post.id, true); } catch {} }} className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600">点赞</button>
+                            <button onClick={async () => { try { await interactApi.unlike(post.id, true); } catch {} }} className="px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600">取消</button>
+                            <Link to={`/post/${post.id}`} className="px-3 py-1 bg-purple-500 text-white rounded-lg hover:bg-purple-600">评论</Link>
+                          </div>
+                        </div>
+                        <p className="text-blue-700 line-clamp-3">{post.content}</p>
                       </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                )}
+              </div>
+            )}
+
+            {activeTab === 'status' && (
+              <div className="bg-white/80 rounded-2xl p-6 backdrop-blur-xl border border-white/40">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-blue-800">说说</h2>
+                  {isOwner && (
+                    <button onClick={() => navigate('/create-status')} className="px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl hover:from-green-600 hover:to-emerald-700">发布说说</button>
+                  )}
+                </div>
+                {loading ? (
+                  <div className="text-center py-6">加载中...</div>
+                ) : statusList.length === 0 ? (
+                  <div className="text-center py-6">暂无说说</div>
+                ) : (
+                  <div className="space-y-4">
+                    {statusList.map((s) => (
+                      <div key={s.id} className="bg-white rounded-xl p-4 border border-blue-100">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="text-sm text-blue-400">{s.ctime ? new Date(s.ctime).toLocaleDateString('zh-CN') : ''}</div>
+                          <div className="space-x-2 flex items-center">
+                            {s.userId !== viewProfile.id && (
+                              <>
+                                <button onClick={() => followUser(s.userId)} className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm">关注作者</button>
+                                <button onClick={() => unfollowUser(s.userId)} className="px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm">取消关注</button>
+                              </>
+                            )}
+                            <span className="text-blue-700">点赞 {statusLikeCount[s.id] || 0}</span>
+                            <button onClick={() => likeStatus(s.id)} disabled={!!likingStatus[s.id]} className="px-3 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 text-sm disabled:opacity-50">点赞</button>
+                            <button onClick={() => unlikeStatus(s.id)} disabled={!!likingStatus[s.id]} className="px-3 py-1 bg-gray-500 text-white rounded-lg hover:bg-gray-600 text-sm disabled:opacity-50">取消</button>
+                            <button onClick={() => toggleComments(s.id)} className="px-3 py-1 bg-purple-500 text-white rounded-lg hover:bg-purple-600 text-sm">{openComments[s.id] ? '收起评论' : '查看/评论'}</button>
+                          </div>
+                        </div>
+                        <p className="text-blue-600 mb-3 whitespace-pre-wrap">{s.content}</p>
+                        {openComments[s.id] && (
+                          <div className="mt-3 border-t border-blue-100 pt-3">
+                            <div className="space-y-2 mb-3">
+                              {(statusComments[s.id] || []).length === 0 ? (
+                                <div className="text-blue-600">暂无评论</div>
+                              ) : (
+                                (statusComments[s.id] || []).map(c => (
+                                  <div key={c.id} className="p-3 rounded-xl bg-white border border-blue-100">
+                                    <div className="text-sm text-blue-500 mb-1">用户 {c.user_id}</div>
+                                    <div className="text-blue-800 whitespace-pre-wrap">{c.content}</div>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <textarea
+                                value={statusCommentText[s.id] || ''}
+                                onChange={(e) => setStatusCommentText(prev => ({ ...prev, [s.id]: e.target.value }))}
+                                placeholder="写下你的评论..."
+                                className="flex-1 p-3 rounded-xl bg-white border border-blue-100 focus:outline-none focus:ring-2 focus:ring-purple-500/30 min-h-[60px]"
+                              />
+                              <button onClick={() => sendStatusComment(s.id)} disabled={!((statusCommentText[s.id] || '').trim())} className="px-4 h-[42px] self-end rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white disabled:opacity-50">发送</button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
-
-        {/* 说说管理 */}
-        {activeTab === 'status' && (
-          <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/40 mb-8">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-blue-800">说说管理</h2>
-              <button
-                onClick={() => navigate('/create-status')}
-                className="px-6 py-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 rounded-xl text-white transition-all duration-200 font-medium shadow-lg"
-              >
-                发布新说说
-              </button>
-            </div>
-            
-            {loading ? (
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                <p className="mt-2 text-blue-600">加载中...</p>
-              </div>
-            ) : statusList.length === 0 ? (
-              <div className="text-center py-8">
-                <svg className="w-16 h-16 mx-auto text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                </svg>
-                <p className="mt-4 text-blue-600">暂无说说</p>
-                <button
-                  onClick={() => navigate('/create-status')}
-                  className="mt-4 px-6 py-2 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl text-white transition-all duration-200 font-medium shadow-lg"
-                >
-                  发布第一条说说
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {statusList.map((status) => (
-                  <div key={status.id} className="bg-white/60 rounded-2xl p-6 backdrop-blur-sm border border-white/50 hover:shadow-md transition-shadow">
-                    <p className="text-blue-600 mb-4">{status.content}</p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm text-blue-400">
-                        {status.ctime ? new Date(status.ctime).toLocaleDateString('zh-CN') : '未知时间'}
-                      </span>
-                      <div className="space-x-2">
-                        <button className="px-4 py-1 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
-                          编辑
-                        </button>
-                        <button className="px-4 py-1 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors">
-                          删除
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 统计信息卡片 */}
-        {activeTab === 'profile' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl p-6 text-white text-center shadow-lg">
-              <div className="text-3xl font-bold mb-2">0</div>
-              <div className="text-blue-100">发布动态</div>
-            </div>
-            <div className="bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl p-6 text-white text-center shadow-lg">
-              <div className="text-3xl font-bold mb-2">0</div>
-              <div className="text-purple-100">获得点赞</div>
-            </div>
-            <div className="bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl p-6 text-white text-center shadow-lg">
-              <div className="text-3xl font-bold mb-2">0</div>
-              <div className="text-cyan-100">关注用户</div>
-            </div>
-          </div>
-        )}
+        </div>
       </div>
 
-      {/* 个人资料编辑面板 */}
-      <ProfilePanel
-        isVisible={showEditPanel}
-        onClose={() => setShowEditPanel(false)}
-        profileData={viewProfile}
-        onSave={handleProfileSave}
-      />
+      {/* 个人资料编辑面板（仅自己） */}
+      {isOwner && (
+        <ProfilePanel
+          isVisible={showEditPanel}
+          onClose={() => setShowEditPanel(false)}
+          profileData={viewProfile}
+          onSave={handleProfileSave}
+        />
+      )}
     </div>
   );
 }

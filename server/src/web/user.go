@@ -46,12 +46,42 @@ type ProfileUpdateReq struct {
 	Website  string `json:"website"`
 }
 
+// getUserIDFromContext 安全获取登录用户ID，兼容多种类型
+func getUserIDFromContext(c *gin.Context) (int64, error) {
+	userIDInterface, exists := c.Get("user_id")
+	if !exists {
+		return 0, fmt.Errorf("unauthorized")
+	}
+
+	switch v := userIDInterface.(type) {
+	case int64:
+		return v, nil
+	case int:
+		return int64(v), nil
+	case int32:
+		return int64(v), nil
+	case float64:
+		return int64(v), nil
+	case float32:
+		return int64(v), nil
+	case string:
+		uid, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return 0, fmt.Errorf("invalid user id")
+		}
+		return uid, nil
+	default:
+		return 0, fmt.Errorf("invalid user id type")
+	}
+}
+
 func (h *UserHandler) RegisterUserRoutes(server *gin.Engine) {
 	ug := server.Group("/api/users")
 	ug.POST("/signup", h.Signup)
 	ug.POST("/login", h.Login)
 	ug.POST("/logout", h.Logout)
 	ug.GET("/profile", h.GetProfile)
+	ug.GET("/profile/:id", h.GetProfileById)
 	ug.PUT("/profile", h.UpdateProfile)
 	ug.POST("/avatar", h.UploadAvatar) // 添加头像上传接口
 	ug.GET("/avatar", h.GetAvatar)     // 获取头像地址接口
@@ -171,21 +201,12 @@ func (h *UserHandler) Logout(c *gin.Context) {
 }
 
 func (h *UserHandler) GetProfile(c *gin.Context) {
-	// 从session获取用户ID
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	// 获取用户ID
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
 			"message": "请先登录",
-		})
-		return
-	}
-
-	userID, ok := userIDInterface.(int64)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "用户ID类型错误",
 		})
 		return
 	}
@@ -213,22 +234,45 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 	})
 }
 
-func (h *UserHandler) UpdateProfile(c *gin.Context) {
-	// 从session获取用户ID
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
-		c.JSON(http.StatusUnauthorized, gin.H{
-			"code":    401,
-			"message": "请先登录",
+// GetProfileById 获取指定用户的资料（公开信息）
+func (h *UserHandler) GetProfileById(c *gin.Context) {
+	idStr := c.Param("id")
+	uid, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || uid <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"code": 400, "message": "用户ID格式错误"})
+		return
+	}
+
+	profile, err := h.userService.GetProfile(c.Request.Context(), uid)
+	if err != nil {
+		var message string
+		switch err {
+		case service.ErrUserNotFound:
+			message = "用户不存在"
+		default:
+			message = "获取个人资料失败: " + err.Error()
+		}
+		c.JSON(http.StatusNotFound, gin.H{
+			"code":    404,
+			"message": message,
 		})
 		return
 	}
 
-	userID, ok := userIDInterface.(int64)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "用户ID类型错误",
+	c.JSON(http.StatusOK, gin.H{
+		"code":    200,
+		"message": "获取成功",
+		"data":    profile,
+	})
+}
+
+func (h *UserHandler) UpdateProfile(c *gin.Context) {
+	// 获取用户ID
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"code":    401,
+			"message": "请先登录",
 		})
 		return
 	}
@@ -251,7 +295,7 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		Website:  req.Website,
 	}
 
-	err := h.userService.UpdateProfile(c.Request.Context(), userID, profile)
+	err = h.userService.UpdateProfile(c.Request.Context(), userID, profile)
 	if err != nil {
 		var message string
 		switch err {
@@ -267,29 +311,32 @@ func (h *UserHandler) UpdateProfile(c *gin.Context) {
 		return
 	}
 
+	// 更新成功后，返回最新的资料
+	updated, fetchErr := h.userService.GetProfile(c.Request.Context(), userID)
+	if fetchErr != nil {
+		// 如果获取失败，仍返回成功但无 data，便于前端再发起一次 GET
+		c.JSON(http.StatusOK, gin.H{
+			"code":    200,
+			"message": "更新成功",
+		})
+		return
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code":    200,
 		"message": "更新成功",
+		"data":    updated,
 	})
 }
 
 // UploadAvatar handles avatar upload
 func (h *UserHandler) UploadAvatar(c *gin.Context) {
-	// 从session获取用户ID
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	// 获取用户ID
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
 			"message": "请先登录",
-		})
-		return
-	}
-
-	userID, ok := userIDInterface.(int64)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "用户ID类型错误",
 		})
 		return
 	}
@@ -419,20 +466,11 @@ func (h *UserHandler) GetUserList(c *gin.Context) {
 
 // GetAvatar 返回当前登录用户的头像地址
 func (h *UserHandler) GetAvatar(c *gin.Context) {
-	userIDInterface, exists := c.Get("user_id")
-	if !exists {
+	userID, err := getUserIDFromContext(c)
+	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"code":    401,
 			"message": "请先登录",
-		})
-		return
-	}
-
-	userID, ok := userIDInterface.(int64)
-	if !ok {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code":    500,
-			"message": "用户ID类型错误",
 		})
 		return
 	}

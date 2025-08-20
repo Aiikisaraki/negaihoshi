@@ -76,7 +76,8 @@ func initWebServer(config *config.ConfigFunction) *gin.Engine {
 	r := gin.Default()
 	frontendPrefix := config.GetFrontendPrefix()
 	r.Use(cors.New(cors.Config{
-		AllowHeaders:     []string{"Content-Type", "Authorization"},
+		AllowHeaders:     []string{"Content-Type", "Authorization", "X-Requested-With", "Accept"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
 			if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
@@ -121,6 +122,10 @@ func initWebServer(config *config.ConfigFunction) *gin.Engine {
 	userHandler, _ := initUser(db, &config.Config)
 	userHandler.RegisterUserRoutes(r)
 
+	// 初始化互动服务并注册路由
+	interHandler := initInteraction(db)
+	interHandler.RegisterRoutes(r)
+
 	// 添加静态文件服务，用于访问上传的头像
 	r.Static("/uploads", "./uploads")
 
@@ -161,6 +166,9 @@ func initDB(config *config.ConfigFunction) *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
+
+	// 初始化互动表
+	_ = dao.NewInteractionDAO(db).InitTables(db)
 
 	return db
 }
@@ -207,4 +215,10 @@ func initAPIDocsHandler(config *config.ConfigFunction) *web.APIDocsHandler {
 
 func initAdminHandler(userService *service.UserService, treeholeService *service.TreeHoleService, statusService *service.StatusAndPostsService) *web.AdminHandler {
 	return web.NewAdminHandler(userService, treeholeService, statusService)
+}
+
+func initInteraction(db *gorm.DB) *web.InteractionHandler {
+	interDAO := dao.NewInteractionDAO(db)
+	interSvc := service.NewInteractionService(interDAO)
+	return web.NewInteractionHandler(interSvc)
 }

@@ -10,6 +10,7 @@ import { PostDetailPage } from './pages/PostDetailPage';
 import { StatusDetailPage } from './pages/StatusDetailPage';
 import { BackgroundSettings } from './components/BackgroundSettings';
 import apiClient, { APIResponse } from './requests/api';
+import { useToast } from './components/Toast';
 
 // 个人资料数据类型
 interface ProfileData {
@@ -44,6 +45,7 @@ function AppContent() {
 
   const navigate = useNavigate();
   const location = useLocation();
+  const toast = useToast();
 
   // 检查本地存储的登录状态
   useEffect(() => {
@@ -157,7 +159,7 @@ function AppContent() {
         
         {/* 主内容区域 - 合并后的毛玻璃卡片效果 */}
         <main className="flex-1 flex items-center justify-center p-4 sm:p-6 lg:p-8">
-          <div className="main-content-glass rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl w-full max-w-6xl">
+          <div className="main-content-glass rounded-3xl p-6 sm:p-8 lg:p-10 shadow-2xl w-full max-w-7xl">
             {/* 标题和标签页区域 */}
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 space-y-4 sm:space-y-0">
               <div></div> {/* 保留空div以保持布局结构 */}
@@ -219,6 +221,7 @@ export default function App() {
   });
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const toast = useToast();
 
   // 检查本地存储的登录状态
   useEffect(() => {
@@ -239,19 +242,21 @@ export default function App() {
 
   const handleProfileUpdate = async (data: ProfileData) => {
     try {
-      // 更新服务器上的个人资料
-      const response = await apiClient.put('/users/profile', data) as APIResponse;
+      // 更新服务器上的个人资料，优先使用后端返回的最新数据
+      const response = await apiClient.put('/users/profile', data) as APIResponse<ProfileData>;
       
       if (response.code === 200) {
-        setProfileData(data);
-        localStorage.setItem('userProfile', JSON.stringify(data));
+        const latest = response.data ?? data;
+        setProfileData(latest);
+        localStorage.setItem('userProfile', JSON.stringify(latest));
+        toast.show('个人资料更新成功', { type: 'success' });
       } else {
         throw new Error(response.message || '更新失败');
       }
     } catch (error: unknown) {
       console.error('更新个人资料失败:', error);
       const errorMessage = error instanceof Error ? error.message : '未知错误';
-      alert(`更新个人资料失败: ${errorMessage}`);
+      toast.show(`更新个人资料失败: ${errorMessage}`, { type: 'error' });
     }
   };
 

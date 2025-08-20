@@ -60,7 +60,7 @@ export function CreateStatusPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50">
       {/* 顶部导航栏 */}
       <div className="w-full bg-white/70 backdrop-blur-md border-b border-white/60">
-        <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
           <h1 className="text-xl font-semibold text-blue-800">发布说说</h1>
           <Link 
             to="/profile?tab=status" 
@@ -71,7 +71,7 @@ export function CreateStatusPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="max-w-6xl mx-auto p-4">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/40">
           <h2 className="text-2xl font-bold text-blue-800 mb-6">新说说</h2>
           
@@ -81,7 +81,7 @@ export function CreateStatusPage() {
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-blue-800 font-medium mb-2">说说内容</label>
               <MarkdownEditor
@@ -90,6 +90,8 @@ export function CreateStatusPage() {
                 placeholder="分享你的想法... (支持 Markdown 格式，有效字符不超过200字)"
                 maxLength={200}
                 mode="status"
+                editorMinHeight={360}
+                dense
               />
             </div>
             
@@ -106,7 +108,7 @@ export function CreateStatusPage() {
               </label>
             </div>
             
-            <div className="flex justify-end gap-4 pt-4">
+            <div className="flex justify-end gap-4 pt-3">
               <Link
                 to="/profile?tab=status"
                 className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 

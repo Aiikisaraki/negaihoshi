@@ -33,9 +33,23 @@ apiClient.interceptors.request.use(
 // 响应拦截器
 apiClient.interceptors.response.use(
   (response) => {
-    console.log('收到响应:', response.status, response.config.url, response.data);
-    // 如果响应状态码是2xx，直接返回数据
-    return response.data;
+    const { status, data, config } = response;
+    console.log('收到响应:', status, config.url, data);
+
+    // 标准化无内容/空响应（例如 204 或后端未返回包裹结构）
+    if (status === 204 || data === '' || data === undefined || data === null) {
+      const normalized: APIResponse<null> = { code: 200, message: 'OK', data: null };
+      return normalized;
+    }
+
+    // 如果后端已是标准结构，直接返回
+    if (typeof data === 'object' && data !== null && 'code' in data) {
+      return data;
+    }
+
+    // 否则包裹为标准结构
+    const wrapped: APIResponse = { code: 200, message: 'OK', data };
+    return wrapped;
   },
   (error) => {
     console.error('API 错误详情:', {
@@ -54,13 +68,13 @@ apiClient.interceptors.response.use(
     if (error.response) {
       // 服务器返回了错误状态码
       const { status, data } = error.response;
-      
+
       // 如果后端返回了结构化的错误信息，使用它
       if (data && typeof data === 'object') {
         return Promise.reject({
-          code: status,
+          code: data.code ?? status,
           message: data.message || `请求失败 (${status})`,
-          data: data.data || null,
+          data: data.data ?? null,
           details: {
             status,
             statusText: error.response.statusText,
@@ -68,7 +82,7 @@ apiClient.interceptors.response.use(
           }
         } as APIResponse);
       }
-      
+
       // 否则返回通用的错误信息
       return Promise.reject({
         code: status,
@@ -81,7 +95,7 @@ apiClient.interceptors.response.use(
         }
       } as APIResponse);
     } else if (error.request) {
-      // 请求已发出但没有收到响应
+      // 请求已发出但没有收到响应（网络层或CORS阻断）
       console.error('API 请求超时或无响应:', error.request);
       return Promise.reject({
         code: 0,
@@ -89,7 +103,8 @@ apiClient.interceptors.response.use(
         data: null,
         details: {
           error: 'REQUEST_TIMEOUT',
-          message: error.message
+          message: error.message,
+          url: error.config?.url,
         }
       } as APIResponse);
     } else {
@@ -101,7 +116,8 @@ apiClient.interceptors.response.use(
         data: null,
         details: {
           error: 'CONFIG_ERROR',
-          message: error.message
+          message: error.message,
+          url: error.config?.url,
         }
       } as APIResponse);
     }

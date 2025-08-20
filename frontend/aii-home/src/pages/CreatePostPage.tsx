@@ -48,7 +48,7 @@ export function CreatePostPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50">
       {/* 顶部导航栏 */}
       <div className="w-full bg-white/70 backdrop-blur-md border-b border-white/60">
-        <div className="max-w-4xl mx-auto flex items-center justify-between px-4 py-3">
+        <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
           <h1 className="text-xl font-semibold text-blue-800">创建文章</h1>
           <Link 
             to="/profile?tab=posts" 
@@ -59,7 +59,7 @@ export function CreatePostPage() {
         </div>
       </div>
 
-      <div className="max-w-4xl mx-auto p-4">
+      <div className="max-w-6xl mx-auto p-4">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/40">
           <h2 className="text-2xl font-bold text-blue-800 mb-6">新文章</h2>
           
@@ -69,7 +69,7 @@ export function CreatePostPage() {
             </div>
           )}
           
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-blue-800 font-medium mb-2">文章标题</label>
               <input
@@ -91,6 +91,8 @@ export function CreatePostPage() {
                 onChange={setContent}
                 placeholder="使用 Markdown 编写文章内容..."
                 mode="post"
+                editorMinHeight={480}
+                dense
               />
             </div>
             
@@ -107,7 +109,7 @@ export function CreatePostPage() {
               </label>
             </div>
             
-            <div className="flex justify-end gap-4 pt-4">
+            <div className="flex justify-end gap-4 pt-3">
               <Link
                 to="/profile?tab=posts"
                 className="px-6 py-3 bg-gray-500 text-white rounded-xl hover:bg-gray-600 

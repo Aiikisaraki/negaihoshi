@@ -11,6 +11,7 @@ package middleware
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -31,6 +32,11 @@ func (l *LoginMiddlewareBuilder) IgnorePaths(path string) *LoginMiddlewareBuilde
 
 func (l *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// 放行预检请求（由 CORS 中间件处理返回 204）
+		if c.Request.Method == http.MethodOptions {
+			return
+		}
+
 		// 添加调试日志
 		fmt.Printf("中间件处理请求: %s %s\n", c.Request.Method, c.Request.URL.Path)
 
@@ -57,8 +63,35 @@ func (l *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 			return
 		}
 
+		// 统一转换为int64，避免后续类型断言失败
+		var uid int64
+		switch v := id.(type) {
+		case int64:
+			uid = v
+		case int:
+			uid = int64(v)
+		case int32:
+			uid = int64(v)
+		case float64:
+			uid = int64(v)
+		case float32:
+			uid = int64(v)
+		case string:
+			parsed, err := strconv.ParseInt(v, 10, 64)
+			if err != nil {
+				fmt.Printf("会话中userId无法解析为int64: %v\n", err)
+				c.AbortWithStatus(http.StatusUnauthorized)
+				return
+			}
+			uid = parsed
+		default:
+			fmt.Printf("未知的userId类型: %T\n", v)
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+
 		// 将用户ID设置到上下文中，供后续处理器使用
-		c.Set("user_id", id)
-		fmt.Printf("用户已认证，userId: %v\n", id)
+		c.Set("user_id", uid)
+		fmt.Printf("用户已认证，userId: %v\n", uid)
 	}
 }

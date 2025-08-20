@@ -4,6 +4,8 @@ import apiClient, { APIResponse } from '../requests/api';
 import { userApi } from '../requests/posts';
 import { AvatarEditor } from './AvatarEditor';
 import { WordPressPanel } from './WordPressPanel';
+import AvatarImage from './AvatarImage';
+import { useToast } from './Toast';
 
 interface ProfileData {
   username: string;
@@ -31,6 +33,7 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editorOpen, setEditorOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const toast = useToast();
 
   // 当外部 profileData 变化时，覆盖内部状态，避免展示旧数据
   useEffect(() => {
@@ -63,12 +66,12 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
 
     // 验证文件类型和大小
     if (!file.type.startsWith('image/')) {
-      alert('请选择图片文件');
+      toast.show('请选择图片文件', { type: 'warning' });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) { // 5MB限制
-      alert('图片文件大小不能超过5MB');
+      toast.show('图片文件大小不能超过5MB', { type: 'warning' });
       return;
     }
 
@@ -99,13 +102,13 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
         // 同步更新到父组件，保证个人中心大头像立即刷新
         onSave({ ...profile, avatar: newAvatar });
         setUploadProgress(100);
-        alert('头像上传成功！');
+        toast.show('头像上传成功', { type: 'success' });
       } else {
         throw new Error(response.message || '上传失败');
       }
     } catch (error) {
       console.error('头像上传失败:', error);
-      alert('头像上传失败，请稍后重试');
+      toast.show('头像上传失败，请稍后重试', { type: 'error' });
     } finally {
       setIsUploading(false);
       setEditorOpen(false);
@@ -114,40 +117,9 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
   };
 
   const handleSave = async () => {
-    try {
-      console.log('开始保存个人资料:', profile);
-
-      // 发送更新请求到服务器
-      const response = await apiClient.put('/users/profile', profile) as APIResponse;
-      
-      console.log('个人资料更新响应:', response);
-      
-      if (response.code === 200) {
-        onSave(profile);
-        setIsEditing(false);
-        alert('个人资料更新成功！');
-      } else {
-        throw new Error(response.message || '更新失败');
-      }
-    } catch (error: unknown) {
-      console.error('更新个人资料失败:', error);
-      
-      // 显示详细的错误信息
-      let errorMessage = '未知错误';
-      if (error instanceof Error) {
-        errorMessage = error.message;
-      } else if (typeof error === 'object' && error !== null) {
-        const errorObj = error as { message?: string; details?: { status?: number; url?: string } };
-        if (errorObj.message) {
-          errorMessage = errorObj.message;
-        }
-        if (errorObj.details) {
-          errorMessage += `\n\n详细信息:\n状态码: ${errorObj.details.status}\nURL: ${errorObj.details.url}`;
-        }
-      }
-      
-      alert(`更新个人资料失败:\n\n${errorMessage}\n\n请检查:\n1. 是否已登录\n2. 网络连接是否正常\n3. 服务器是否运行`);
-    }
+    // 子组件不直接请求保存，交由父组件统一处理并使用后端返回的最新数据
+    onSave(profile);
+    setIsEditing(false);
   };
 
   const handleCancel = () => {
@@ -199,21 +171,11 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
                 <div className="text-center mb-6">
                   <div className="relative inline-block">
                     <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-white/20 mx-auto mb-4">
-                      {profile.avatar ? (
-                        <img 
-                          src={profile.avatar.startsWith('http') ? profile.avatar : `http://localhost:9292${profile.avatar}`} 
-                          alt="头像" 
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                          <svg className="w-16 h-16 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        </div>
-                      )}
+                      <AvatarImage
+                        src={profile.avatar}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
-                    
                     {/* 上传进度条 */}
                     {isUploading && (
                       <div className="w-full bg-white/10 rounded-full h-2 mb-2">
@@ -223,7 +185,6 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
                         />
                       </div>
                     )}
-                    
                     {/* 上传按钮 */}
                     <input
                       ref={fileInputRef}
@@ -243,7 +204,6 @@ export const ProfilePanel = ({ isVisible, onClose, profileData, onSave }: Profil
                     </button>
                   </div>
                 </div>
-
                 {/* 用户名和邮箱 */}
                 <div className="space-y-3">
                   <div>

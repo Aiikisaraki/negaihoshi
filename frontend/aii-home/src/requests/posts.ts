@@ -146,9 +146,13 @@ export const userApi = {
   getAvatar: async (): Promise<ApiResponse<{ avatar_url: string }>> => {
     return apiClient.get('/users/avatar');
   },
-  // 获取个人资料
+  // 获取个人资料（当前登录用户）
   getProfile: async (): Promise<ApiResponse<{ id: number; username: string; email: string; nickname: string; bio: string; avatar: string; phone: string; location: string; website: string; ctime: string; utime: string }>> => {
     return apiClient.get('/users/profile');
+  },
+  // 按ID获取公开资料
+  getProfileById: async (id: number): Promise<ApiResponse<{ id: number; username: string; email: string; nickname: string; bio: string; avatar: string; phone: string; location: string; website: string; ctime: string; utime: string }>> => {
+    return apiClient.get(`/users/profile/${id}`);
   }
 };
 
