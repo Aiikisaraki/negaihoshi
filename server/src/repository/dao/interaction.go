@@ -102,3 +102,10 @@ func (d *InteractionDAO) CountFollowers(ctx context.Context, userId int64) (int6
 	err := d.db.WithContext(ctx).Model(&Follow{}).Where("followee_id=?", userId).Count(&count).Error
 	return count, err
 }
+
+// HasFollowed 检查用户是否已关注另一个用户
+func (d *InteractionDAO) HasFollowed(ctx context.Context, followerId, followeeId int64) (bool, error) {
+	var count int64
+	err := d.db.WithContext(ctx).Model(&Follow{}).Where("follower_id=? AND followee_id=?", followerId, followeeId).Count(&count).Error
+	return count > 0, err
+}

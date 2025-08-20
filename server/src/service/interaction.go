@@ -95,3 +95,11 @@ func (s *InteractionService) CountFollowers(ctx context.Context, userId int64) (
 	}
 	return s.dao.CountFollowers(ctx, userId)
 }
+
+// IsFollowing 检查用户是否已关注另一个用户
+func (s *InteractionService) IsFollowing(ctx context.Context, followerId, followeeId int64) (bool, error) {
+	if followerId <= 0 || followeeId <= 0 {
+		return false, ErrInvalidContent
+	}
+	return s.dao.HasFollowed(ctx, followerId, followeeId)
+}

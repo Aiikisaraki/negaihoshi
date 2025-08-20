@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { userApi, postApi } from '../requests/posts';
+import { userApi } from '../requests/posts';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { ProfilePanel } from '../components/ProfilePanel';
 import apiClient from '../requests/api';
@@ -60,6 +60,9 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<number | undefined>(profileData.id);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [followLoading, setFollowLoading] = useState<boolean>(false);
+  const toast = useToast();
 
   const isOwner = !routeUserId || (currentUserId !== undefined && routeUserId === currentUserId);
 
@@ -71,6 +74,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed.id === 'number') {
           setCurrentUserId(parsed.id);
+          setIsLoggedIn(true);
           return;
         }
       }
@@ -78,6 +82,11 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
     if (profileData?.id && typeof profileData.id === 'number') {
       setCurrentUserId(profileData.id);
     }
+    // 检查登录状态
+    try {
+      const loginStatus = localStorage.getItem('isLoggedIn');
+      setIsLoggedIn(loginStatus === 'true');
+    } catch {}
   }, [profileData.id]);
 
   // 路由变化时重置状态，避免显示旧用户的数据
@@ -229,6 +238,21 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
     })();
   }, [viewProfile.id]);
 
+  // 检查关注状态（仅查看他人资料时）
+  useEffect(() => {
+    (async () => {
+      if (!viewProfile.id || isOwner || !currentUserId || !isLoggedIn) return;
+      try {
+        const resp = await interactApi.isFollowing(viewProfile.id);
+        if (resp.code === 200) {
+          setIsFollowing(resp.data.following);
+        }
+      } catch (e) {
+        console.debug('检查关注状态失败', e);
+      }
+    })();
+  }, [viewProfile.id, isOwner, currentUserId, isLoggedIn]);
+
   // 获取用户的文章列表
   const fetchPosts = async () => {
     setLoading(true);
@@ -247,14 +271,14 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
         const userPosts = normalized.filter((post: any) => post.userId === viewProfile.id);
         setPosts(userPosts);
         // 拉取点赞计数与状态（仅在查看他人时有意义，但本地缓存不影响）
-        const ids = userPosts.map(p => p.id);
+        const ids = userPosts.map((p: PostItem) => p.id);
         const [counts, liked] = await Promise.all([
-          Promise.all(ids.map(id => interactApi.likeCount(id, true).catch(() => ({ code: 500, data: { count: 0 } } as any)))) ,
-          isLoggedIn ? Promise.all(ids.map(id => interactApi.isLiked(id, true).catch(() => ({ code: 401, data: { liked: false } } as any)))) : Promise.resolve(ids.map(() => ({ code: 401, data: { liked: false } } as any)))
+          Promise.all(ids.map((id: number) => interactApi.likeCount(id, true).catch(() => ({ code: 500, data: { count: 0 } } as any)))) ,
+          isLoggedIn ? Promise.all(ids.map((id: number) => interactApi.isLiked(id, true).catch(() => ({ code: 401, data: { liked: false } } as any)))) : Promise.resolve(ids.map(() => ({ code: 401, data: { liked: false } } as any)))
         ]);
         const countMap: Record<number, number> = {};
         const likedMap: Record<number, boolean> = {};
-        ids.forEach((id, idx) => {
+        ids.forEach((id: number, idx: number) => {
           countMap[id] = (counts[idx].code === 200 && (counts[idx].data as any)?.count) ? (counts[idx].data as any).count : 0;
           likedMap[id] = (liked[idx].code === 200 && (liked[idx].data as any)?.liked) ? true : false;
         });
@@ -285,14 +309,14 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
         const userStatus = normalized.filter((status: any) => status.userId === viewProfile.id);
         setStatusList(userStatus);
         // 拉取点赞计数与状态
-        const ids = userStatus.map(s => s.id);
+        const ids = userStatus.map((s: StatusItem) => s.id);
         const [counts, liked] = await Promise.all([
-          Promise.all(ids.map(id => interactApi.likeCount(id, false).catch(() => ({ code: 500, data: { count: 0 } } as any)))),
-          isLoggedIn ? Promise.all(ids.map(id => interactApi.isLiked(id, false).catch(() => ({ code: 401, data: { liked: false } } as any)))) : Promise.resolve(ids.map(() => ({ code: 401, data: { liked: false } } as any)))
+          Promise.all(ids.map((id: number) => interactApi.likeCount(id, false).catch(() => ({ code: 500, data: { count: 0 } } as any)))),
+          isLoggedIn ? Promise.all(ids.map((id: number) => interactApi.isLiked(id, false).catch(() => ({ code: 401, data: { liked: false } } as any)))) : Promise.resolve(ids.map(() => ({ code: 401, data: { liked: false } } as any)))
         ]);
         const countMap: Record<number, number> = {};
         const likedMap: Record<number, boolean> = {};
-        ids.forEach((id, idx) => {
+        ids.forEach((id: number, idx: number) => {
           countMap[id] = (counts[idx].code === 200 && (counts[idx].data as any)?.count) ? (counts[idx].data as any).count : 0;
           likedMap[id] = (liked[idx].code === 200 && (liked[idx].data as any)?.liked) ? true : false;
         });
@@ -361,6 +385,28 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
           setStatusComments(prev => ({ ...prev, [sid]: items.map(i => ({ id: i.id, content: i.content, user_id: i.user_id, ctime: i.ctime })) }));
         }
       } catch (e) { console.debug('加载说说互动失败', e); }
+    }
+  };
+
+  // 打开/刷新文章评论
+  const togglePostComments = async (pid: number) => {
+    const opened = postOpenComments[pid];
+    const next = { ...postOpenComments, [pid]: !opened };
+    setPostOpenComments(next);
+    if (!opened) {
+      try {
+        const [likeResp, likedResp, commentsResp] = await Promise.all([
+          interactApi.likeCount(pid, true),
+          interactApi.isLiked(pid, true).catch(() => ({ code: 401, data: { liked: false } } as any)),
+          interactApi.listComments(pid, true, 1, 10)
+        ]);
+        if (likeResp.code === 200) setPostLikeCount(prev => ({ ...prev, [pid]: (likeResp.data as any).count || 0 }));
+        if (likedResp.code === 200) setPostLiked(prev => ({ ...prev, [pid]: !!(likedResp.data as any)?.liked }));
+        if (commentsResp.code === 200) {
+          const items = (commentsResp.data.comments || []) as any[];
+          setPostComments(prev => ({ ...prev, [pid]: items.map(i => ({ id: i.id, content: i.content, user_id: i.user_id, ctime: i.ctime })) }));
+        }
+      } catch (e) { console.debug('加载文章互动失败', e); }
     }
   };
 
@@ -468,10 +514,19 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
     }
   };
 
-  const followUser = async (uid: number) => {
-    if (!uid) return;
+  // 切换关注状态
+  const toggleFollow = async (uid: number) => {
+    if (!uid || followLoading) return;
+    setFollowLoading(true);
     try {
-      await interactApi.follow(uid);
+      if (isFollowing) {
+        await interactApi.unfollow(uid);
+        setIsFollowing(false);
+      } else {
+        await interactApi.follow(uid);
+        setIsFollowing(true);
+      }
+      // 更新关注/粉丝数
       if (viewProfile.id) {
         const [followingResp, followersResp] = await Promise.all([
           interactApi.countFollowing(viewProfile.id),
@@ -480,21 +535,11 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
         if (followingResp.code === 200) setFollowingCount(followingResp.data.count || 0);
         if (followersResp.code === 200) setFollowersCount(followersResp.data.count || 0);
       }
-    } catch (e) { console.debug('关注失败', e); }
-  };
-  const unfollowUser = async (uid: number) => {
-    if (!uid) return;
-    try {
-      await interactApi.unfollow(uid);
-      if (viewProfile.id) {
-        const [followingResp, followersResp] = await Promise.all([
-          interactApi.countFollowing(viewProfile.id),
-          interactApi.countFollowers(viewProfile.id),
-        ]);
-        if (followingResp.code === 200) setFollowingCount(followingResp.data.count || 0);
-        if (followersResp.code === 200) setFollowersCount(followersResp.data.count || 0);
-      }
-    } catch (e) { console.debug('取消关注失败', e); }
+    } catch (e) { 
+      console.debug('关注操作失败', e); 
+    } finally {
+      setFollowLoading(false);
+    }
   };
 
   const dynamicsCount = posts.length + statusList.length;
@@ -552,11 +597,23 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
               </div>
               {isOwner ? (
                 <button onClick={() => setShowEditPanel(true)} className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl hover:from-blue-600 hover:to-purple-700">编辑个人信息</button>
-              ) : (
-                <div className="flex gap-2">
-                  <button onClick={() => followUser(viewProfile.id!)} className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600">关注</button>
-                  <button onClick={() => unfollowUser(viewProfile.id!)} className="flex-1 px-4 py-2 bg-gray-500 text-white rounded-xl hover:bg-gray-600">取消关注</button>
+              ) : !isLoggedIn ? (
+                <div className="text-center">
+                  <div className="text-blue-600 mb-2">登录后可以关注用户</div>
+                  <Link to="/login" className="w-full px-4 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 block">去登录</Link>
                 </div>
+              ) : (
+                <button 
+                  onClick={() => toggleFollow(viewProfile.id!)} 
+                  disabled={followLoading}
+                  className={`w-full px-4 py-2 rounded-xl transition-all duration-200 disabled:opacity-50 ${
+                    isFollowing 
+                      ? 'bg-gray-500 text-white hover:bg-gray-600' 
+                      : 'bg-blue-500 text-white hover:bg-blue-600'
+                  }`}
+                >
+                  {followLoading ? '处理中...' : (isFollowing ? '取消关注' : '关注')}
+                </button>
               )}
               {/* 统计 */}
               <div className="mt-5 grid grid-cols-4 gap-3">

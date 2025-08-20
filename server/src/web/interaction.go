@@ -32,6 +32,7 @@ func (h *InteractionHandler) RegisterRoutes(server *gin.Engine) {
 	g.DELETE("/follow", h.Unfollow)
 	g.GET("/followers/count", h.CountFollowers)
 	g.GET("/following/count", h.CountFollowing)
+	g.GET("/is-following", h.IsFollowing)
 }
 
 func (h *InteractionHandler) currentUserId(c *gin.Context) (int64, bool) {
@@ -222,4 +223,22 @@ func (h *InteractionHandler) CountFollowing(c *gin.Context) {
 		return
 	}
 	SuccessResponse(c, gin.H{"count": cnt})
+}
+
+func (h *InteractionHandler) IsFollowing(c *gin.Context) {
+	followerId, ok := h.currentUserId(c)
+	if !ok {
+		return
+	}
+	followeeId, _ := strconv.ParseInt(c.Query("followee_id"), 10, 64)
+	if followeeId <= 0 {
+		ValidationError(c, "参数错误")
+		return
+	}
+	isFollowing, err := h.svc.IsFollowing(c.Request.Context(), followerId, followeeId)
+	if err != nil {
+		ValidationError(c, err.Error())
+		return
+	}
+	SuccessResponse(c, gin.H{"following": isFollowing})
 }
