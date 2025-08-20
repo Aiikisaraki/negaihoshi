@@ -104,7 +104,18 @@ func initWebServer(config *config.ConfigFunction) *gin.Engine {
 		IgnorePaths("/favicon.ico").
 		IgnorePaths("/api/treehole/list").
 		IgnorePaths("/api/treehole/list/*").
+		IgnorePaths("/api/treehole/guest-quota").
 		IgnorePaths("/api/treehole/create").
+		IgnorePaths("/api/posts/listAll").
+		IgnorePaths("/api/posts/view").
+		IgnorePaths("/api/posts/view/*").
+		// 放开用户公开资料（用于未登录查看他人资料）
+		IgnorePaths("/api/users/profile/*").
+		// 放开只读互动接口：点赞计数、评论列表、粉丝/关注计数
+		IgnorePaths("/api/interact/likes/count").
+		IgnorePaths("/api/interact/comments").
+		IgnorePaths("/api/interact/followers/count").
+		IgnorePaths("/api/interact/following/count").
 		IgnorePaths("/api/docs").
 		IgnorePaths("/api/test").
 		IgnorePaths("/api/docs/json").

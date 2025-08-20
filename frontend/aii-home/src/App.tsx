@@ -10,7 +10,9 @@ import { PostDetailPage } from './pages/PostDetailPage';
 import { StatusDetailPage } from './pages/StatusDetailPage';
 import { BackgroundSettings } from './components/BackgroundSettings';
 import apiClient, { APIResponse } from './requests/api';
-import { useToast } from './components/Toast';
+// import { useToast } from './components/Toast';
+import LoginPage from './pages/LoginPage';
+import SignupPage from './pages/SignupPage';
 
 // 个人资料数据类型
 interface ProfileData {
@@ -45,7 +47,7 @@ function AppContent() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const toast = useToast();
+  // 移除未使用的 toast（AppContent 内不需要）
 
   // 检查本地存储的登录状态
   useEffect(() => {
@@ -64,10 +66,53 @@ function AppContent() {
     }
   }, []);
 
+  // 若已登录但本地资料缺少 id，则拉取服务器资料以补全 id
+  useEffect(() => {
+    const ensureProfileId = async () => {
+      if (!isLoggedIn) return;
+      if ((profileData as { id?: number })?.id) return;
+      try {
+        const resp = await apiClient.get('/users/profile') as APIResponse<ProfileData & { id?: number }>;
+        if (resp.code === 200 && resp.data) {
+          setProfileData(resp.data);
+          localStorage.setItem('userProfile', JSON.stringify(resp.data));
+        }
+      } catch {
+        // 忽略：资料获取失败不影响继续渲染
+      }
+    };
+    void ensureProfileId();
+  }, [isLoggedIn, profileData]);
+
+  // 若已登录但 localStorage 没有 userProfile，则拉取一次资料写入
+  useEffect(() => {
+    const savedLoginState = localStorage.getItem('isLoggedIn');
+    if (savedLoginState === 'true' && !localStorage.getItem('userProfile')) {
+      (async () => {
+        try {
+          const resp = await apiClient.get('/users/profile') as APIResponse<ProfileData & { id?: number }>;
+          if (resp.code === 200 && resp.data) {
+            setProfileData(resp.data);
+            localStorage.setItem('userProfile', JSON.stringify(resp.data));
+          }
+        } catch {
+          // 忽略：首次拉取资料失败
+        }
+      })();
+    }
+  }, [isLoggedIn]);
+
   // 根据当前路由设置标签页
   useEffect(() => {
     if (location.pathname === '/profile') {
       setCurrentTab('home'); // 重置标签页，因为个人中心现在是独立页面
+    }
+  }, [location.pathname]);
+
+  // 首页浏览器标题
+  useEffect(() => {
+    if (location.pathname === '/') {
+      document.title = '星の海の物語';
     }
   }, [location.pathname]);
 
@@ -83,7 +128,7 @@ function AppContent() {
     try {
       // 从服务器获取最新的个人资料
       console.log('正在获取用户个人资料...');
-      const response = await apiClient.get('/users/profile') as APIResponse<ProfileData>;
+      const response = await apiClient.get('/users/profile') as APIResponse<ProfileData & { id: number } >;
       console.log('获取个人资料响应:', response);
       
       if (response.code === 200 && response.data) {
@@ -142,7 +187,39 @@ function AppContent() {
   };
 
   const handleProfileClick = () => {
-    navigate('/profile');
+    // 1) 优先使用内存中的 profileData
+    if ((profileData as { id?: number })?.id) {
+      navigate(`/profile/${(profileData as { id?: number }).id}`);
+      return;
+    }
+    // 2) 再尝试本地存储
+    const savedProfile = localStorage.getItem('userProfile');
+    if (savedProfile) {
+      try {
+        const p = JSON.parse(savedProfile) as ProfileData & { id?: number };
+        if (p.id) {
+          navigate(`/profile/${p.id}`);
+          return;
+        }
+      } catch {
+        // 忽略：本地 userProfile JSON 解析失败
+      }
+    }
+    // 3) 最后尝试从后端拉取一次
+    (async () => {
+      try {
+        const resp = await apiClient.get('/users/profile') as APIResponse<ProfileData & { id?: number }>;
+        if (resp.code === 200 && resp.data?.id) {
+          localStorage.setItem('userProfile', JSON.stringify(resp.data));
+          navigate(`/profile/${resp.data.id}`);
+          return;
+        }
+      } catch {
+        // 忽略：未登录或获取失败
+      }
+      // 兜底
+      navigate('/profile');
+    })();
   };
 
   return (
@@ -164,7 +241,7 @@ function AppContent() {
             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-8 space-y-4 sm:space-y-0">
               <div></div> {/* 保留空div以保持布局结构 */}
               <div className="flex items-center gap-3">
-                {/* 移除说说管理和文章管理入口 */}
+                {/* 保留空位，避免布局抖动 */}
               </div>
             </div>
 
@@ -173,10 +250,7 @@ function AppContent() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
                 {/* 主体：文章列表（2列宽） */}
                 <div className="lg:col-span-2 space-y-6">
-                  <Section title="文章精选">
-                    {/* TODO: 文章列表组件（Markdown 摘要渲染） */}
-                    <div className="text-blue-700">这里将展示用户发布的文章列表（支持 Markdown 摘要）。</div>
-                  </Section>
+                  <HomePostsSection isLoggedIn={isLoggedIn} />
                 </div>
 
                 {/* 右侧栏：树洞与发布树洞 */}
@@ -184,15 +258,8 @@ function AppContent() {
                   <Section title="树洞">
                     <Timeline refreshTrigger={refreshTrigger} />
                   </Section>
-                  <Section title={isLoggedIn ? "发布树洞" : "游客模式"}>
-                    {isLoggedIn ? (
-                      <EditorPanel onPostSuccess={handlePostSuccess} />
-                    ) : (
-                      <div className="text-center p-8 sm:p-10 text-blue-700">
-                        <p className="mb-4 text-lg sm:text-xl">登录后即可发布树洞</p>
-                        <p className="text-base sm:text-lg text-blue-600">在星空下分享你的心情和想法</p>
-                      </div>
-                    )}
+                  <Section title="发布树洞">
+                    <EditorPanel onPostSuccess={handlePostSuccess} />
                   </Section>
                 </div>
               </div>
@@ -221,8 +288,6 @@ export default function App() {
   });
 
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const toast = useToast();
-
   // 检查本地存储的登录状态
   useEffect(() => {
     const savedLoginState = localStorage.getItem('isLoggedIn');
@@ -249,14 +314,13 @@ export default function App() {
         const latest = response.data ?? data;
         setProfileData(latest);
         localStorage.setItem('userProfile', JSON.stringify(latest));
-        toast.show('个人资料更新成功', { type: 'success' });
+        // toast.show('个人资料更新成功', { type: 'success' }); // 移除未使用的 toast
       } else {
         throw new Error(response.message || '更新失败');
       }
     } catch (error: unknown) {
       console.error('更新个人资料失败:', error);
-      const errorMessage = error instanceof Error ? error.message : '未知错误';
-      toast.show(`更新个人资料失败: ${errorMessage}`, { type: 'error' });
+      /* noop */
     }
   };
 
@@ -264,6 +328,8 @@ export default function App() {
     <Router>
       <Routes>
         <Route path="/" element={<AppContent />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
         <Route 
           path="/profile" 
           element={
@@ -278,7 +344,7 @@ export default function App() {
                   <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
                   <p className="text-blue-600 mb-6">登录后即可查看和编辑个人资料</p>
                   <button
-                    onClick={() => window.location.href = '/'}
+                    onClick={() => window.location.href = '/login'}
                     className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
                   >
                     返回首页
@@ -287,6 +353,15 @@ export default function App() {
               </div>
             )
           } 
+        />
+        <Route
+          path="/profile/:id"
+          element={
+            <ProfilePage
+              profileData={profileData}
+              onProfileUpdate={handleProfileUpdate}
+            />
+          }
         />
         <Route 
           path="/create-post" 
@@ -299,7 +374,7 @@ export default function App() {
                   <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
                   <p className="text-blue-600 mb-6">登录后即可创建文章</p>
                   <button
-                    onClick={() => window.location.href = '/'}
+                    onClick={() => window.location.href = '/login'}
                     className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
                   >
                     返回首页
@@ -320,7 +395,7 @@ export default function App() {
                   <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
                   <p className="text-blue-600 mb-6">登录后即可发布说说</p>
                   <button
-                    onClick={() => window.location.href = '/'}
+                    onClick={() => window.location.href = '/login'}
                     className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
                   >
                     返回首页
@@ -340,6 +415,208 @@ export default function App() {
         />
       </Routes>
     </Router>
+  );
+}
+
+type PostListItem = { id: number; title: string; content: string; userId: number; ctime?: string };
+// 首页文章列表
+function HomePostsSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [posts, setPosts] = useState<PostListItem[]>([]);
+  const [likeCount, setLikeCount] = useState<Record<number, number>>({});
+  const [liked, setLiked] = useState<Record<number, boolean>>({});
+  const [busy, setBusy] = useState<Record<number, boolean>>({});
+  const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
+  const [comments, setComments] = useState<Record<number, Array<{ id: number; content: string; user_id: number; ctime: number }>>>({});
+  const [commentText, setCommentText] = useState<Record<number, string>>({});
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const resp = await apiClient.get('/posts/listAll?isPost=true') as APIResponse<PostListItem[] | { posts?: PostListItem[] } >;
+        if (resp.code === 200) {
+          const raw = Array.isArray(resp.data)
+            ? (resp.data as Array<Record<string, unknown>>)
+            : ((resp.data as { posts?: Array<Record<string, unknown>> }).posts || []);
+          const normalized: PostListItem[] = raw
+            .map((p: Record<string, unknown>) => {
+              const id = (p.id as number | undefined) ?? (p.Id as number | undefined);
+              const userId = (p.userId as number | undefined) ?? (p.UserId as number | undefined);
+              if (!id || !userId) return undefined;
+              const title = (p.title as string | undefined) ?? (p.Title as string | undefined) ?? '';
+              const content = (p.content as string | undefined) ?? (p.Content as string | undefined) ?? '';
+              const ctime = (p.ctime as string | undefined) ?? (p.Ctime as string | undefined);
+              return { id, userId, title, content, ctime } as PostListItem;
+            })
+            .filter((v): v is PostListItem => v !== undefined);
+          setPosts(normalized);
+          // 拉取点赞计数与状态
+          const ids = normalized.map(p => p.id);
+          const { interactApi } = await import('./requests/interact');
+          const counts = await Promise.all(
+            ids.map((id: number) => interactApi.likeCount(id, true))
+          ).catch(() => [] as Array<{ code?: number; data?: { count?: number } }>);
+          const likedResp = await Promise.all(
+            ids.map((id: number) => interactApi.isLiked(id, true).catch(() => ({ code: 401, data: { liked: false } } as { code: number; data: { liked: boolean } })))
+          );
+          const countMap: Record<number, number> = {};
+          const likedMap: Record<number, boolean> = {};
+          ids.forEach((id: number, idx: number) => {
+            const c = counts[idx] as { code?: number; data?: { count?: number } } | undefined;
+            const l = likedResp[idx] as { code?: number; data?: { liked?: boolean } } | undefined;
+            countMap[id] = (c && c.code === 200 && c.data && typeof c.data.count === 'number') ? c.data.count : 0;
+            likedMap[id] = !!(l && l.code === 200 && l.data && l.data.liked);
+          });
+          setLikeCount(countMap);
+          setLiked(likedMap);
+          setError('');
+        } else {
+          setError(resp.message || '加载失败');
+        }
+      } catch { /* noop */ }
+      finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const toggleLike = async (pid: number) => {
+    if (busy[pid]) return;
+    setBusy(prev => ({ ...prev, [pid]: true }));
+    try {
+      const { interactApi } = await import('./requests/interact');
+      if (liked[pid]) {
+        const r = await interactApi.unlike(pid, true);
+        if (r.code === 200) {
+          setLiked(prev => ({ ...prev, [pid]: false }));
+          setLikeCount(prev => ({ ...prev, [pid]: r.data.count ?? Math.max(0, (prev[pid] || 1) - 1) }));
+        }
+      } else {
+        const r = await interactApi.like(pid, true);
+        if (r.code === 200) {
+          setLiked(prev => ({ ...prev, [pid]: true }));
+          setLikeCount(prev => ({ ...prev, [pid]: r.data.count ?? (prev[pid] || 0) + 1 }));
+        }
+      }
+    } catch { /* noop */ }
+    finally {
+      setBusy(prev => ({ ...prev, [pid]: false }));
+    }
+  };
+
+  const toggleComments = async (pid: number) => {
+    const opened = openComments[pid];
+    const next = { ...openComments, [pid]: !opened };
+    setOpenComments(next);
+    if (!opened) {
+      try {
+        const { interactApi } = await import('./requests/interact');
+        const resp = await interactApi.listComments(pid, true, 1, 10);
+        if (resp.code === 200) {
+          const items = (resp.data.comments || []) as Array<{ id: number; content: string; user_id: number; ctime: number }>;
+          setComments(prev => ({ ...prev, [pid]: items.map(i => ({ id: i.id, content: i.content, user_id: i.user_id, ctime: i.ctime })) }));
+        }
+      } catch { /* noop */ }
+    }
+  };
+
+  const sendComment = async (pid: number) => {
+    const text = (commentText[pid] || '').trim();
+    if (!text) return;
+    try {
+      const { interactApi } = await import('./requests/interact');
+      await interactApi.addComment(pid, true, text);
+      const resp = await interactApi.listComments(pid, true, 1, 10);
+      if (resp.code === 200) {
+        const items = (resp.data.comments || []) as Array<{ id: number; content: string; user_id: number; ctime: number }>;
+        setComments(prev => ({ ...prev, [pid]: items.map(i => ({ id: i.id, content: i.content, user_id: i.user_id, ctime: i.ctime })) }));
+      }
+      setCommentText(prev => ({ ...prev, [pid]: '' }));
+    } catch { /* noop */ }
+  };
+
+  return (
+    <Section title="文章精选">
+      {loading ? (
+        <div className="text-blue-700">加载中...</div>
+      ) : error ? (
+        <div className="text-red-600">{error}</div>
+      ) : posts.length === 0 ? (
+        <div className="text-blue-700">暂无文章</div>
+      ) : (
+        <div className="space-y-4">
+          {posts.map(p => (
+            <a key={p.id} href={`/post/${p.id}`} className="block bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-white/40 hover:shadow-lg transition-shadow">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-xl font-semibold text-blue-800">{p.title || '无标题'}</h3>
+                <span className="text-sm text-blue-600">{p.ctime ? new Date(p.ctime).toLocaleDateString('zh-CN') : ''}</span>
+              </div>
+              <p className="text-blue-700 line-clamp-3 whitespace-pre-wrap">{p.content}</p>
+              <div className="mt-3 flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); toggleLike(p.id); }}
+                  disabled={!!busy[p.id]}
+                  title={liked[p.id] ? '取消点赞' : '点赞'}
+                  className={`flex items-center gap-2 px-3 py-1 rounded-lg border ${liked[p.id] ? 'bg-red-500 text-white border-red-500' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'} disabled:opacity-50`}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 ${liked[p.id] ? '' : 'text-red-500'}`}>
+                    <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.462 2.25 9a4.5 4.5 0 018.159-2.606.75.75 0 001.282 0A4.5 4.5 0 0119.85 9c0 3.462-2.438 6.36-4.739 8.507a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.218l-.022.012-.007.003-.003.002a.75.75 0 01-.698 0l-.003-.002z" />
+                  </svg>
+                  <span>{likeCount[p.id] || 0}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => { e.preventDefault(); toggleComments(p.id); }}
+                  className="px-3 py-1 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+                >
+                  评论
+                </button>
+              </div>
+              {openComments[p.id] && (
+                <div className="mt-3 border-t border-blue-100 pt-3">
+                  {!isLoggedIn ? (
+                    <div className="text-blue-700">
+                      登录后才可以发表评论哦，
+                      <Link to="/login" className="underline text-blue-600 hover:text-blue-700">登录</Link>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2 mb-3">
+                        {(comments[p.id] || []).length === 0 ? (
+                          <div className="text-blue-600">暂无评论</div>
+                        ) : (
+                          (comments[p.id] || []).map(c => (
+                            <div key={c.id} className="p-3 rounded-xl bg-white border border-blue-100">
+                              <div className="text-sm text-blue-500 mb-1">用户 {c.user_id}</div>
+                              <div className="text-blue-800 whitespace-pre-wrap">{c.content}</div>
+                            </div>
+                          ))
+                        )}
+                        <div className="p-2">
+                          <a href={`/post/${p.id}`} className="text-blue-600 hover:text-blue-700 underline">查看更多评论</a>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <textarea
+                          value={commentText[p.id] || ''}
+                          onChange={(e) => setCommentText(prev => ({ ...prev, [p.id]: e.target.value }))}
+                          placeholder="写下你的评论..."
+                          className="flex-1 p-3 rounded-xl bg-white border border-blue-100 focus:outline-none focus:ring-2 focus:ring-purple-500/30 min-h-[60px]"
+                        />
+                        <button onClick={(e) => { e.preventDefault(); sendComment(p.id); }} disabled={!((commentText[p.id] || '').trim())} className="px-4 h-[42px] self-end rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white disabled:opacity-50">发送</button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </a>
+          ))}
+        </div>
+      )}
+    </Section>
   );
 }
 

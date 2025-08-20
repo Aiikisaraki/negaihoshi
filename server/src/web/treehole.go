@@ -2,20 +2,26 @@
  * @Author: Aii 如樱如月 morikawa@kimisui56.work
  * @Date: 2025-05-01 14:57:12
  * @LastEditors: Aii如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-08-06 22:43:20
+ * @LastEditTime: 2025-08-20 01:59:40
  * @FilePath: \negaihoshi\server\src\web\treehole.go
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
 package web
 
 import (
-	"negaihoshi/server/src/domain"
-	"negaihoshi/server/src/service"
+	"context"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
+
+	"negaihoshi/server/config"
+	"negaihoshi/server/src/domain"
+	"negaihoshi/server/src/service"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	redis "github.com/redis/go-redis/v9"
 )
 
 type TreeHoleHandler struct {
@@ -35,11 +41,56 @@ func (t *TreeHoleHandler) RegisterTreeHoleRoutes(server *gin.Engine) {
 	tg.GET("/list/:uid", t.GetUserTreeHoleMessageList)
 	tg.GET("/:id", t.GetTreeHoleMessage)
 	tg.DELETE("/:id", t.DeleteTreeHoleMessage)
+	// 游客配额查询（无须登录）
+	tg.GET("/guest-quota", t.GetGuestQuota)
+}
+
+// GET /api/treehole/guest-quota
+// 返回当日游客配额信息：limit, used, remaining
+func (t *TreeHoleHandler) GetGuestQuota(ctx *gin.Context) {
+	cfg := config.ConfigFunction{}
+	_ = cfg.ReadConfiguration("config/config.json")
+	limit := 5
+	if cfg.Config.Guest.DailyTreeholeLimit > 0 {
+		limit = cfg.Config.Guest.DailyTreeholeLimit
+	}
+
+	redisHost, redisPort, redisPwd := cfg.GetRedisConfig()
+	addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+	rdb := redis.NewClient(&redis.Options{Addr: addr, Password: redisPwd, DB: 0})
+	defer func() { _ = rdb.Close() }()
+
+	ip := ctx.ClientIP()
+	now := time.Now()
+	dateStr := now.Format("2006-01-02")
+	key := fmt.Sprintf("guest:treehole:%s:%s", ip, dateStr)
+	c := context.Background()
+
+	val, err := rdb.Get(c, key).Int()
+	if err != nil && err != redis.Nil {
+		ErrorResponse(ctx, http.StatusInternalServerError, "查询失败")
+		return
+	}
+	used := 0
+	if err == nil {
+		used = val
+	}
+	remaining := limit - used
+	if remaining < 0 {
+		remaining = 0
+	}
+
+	SuccessResponse(ctx, map[string]interface{}{
+		"limit":     limit,
+		"used":      used,
+		"remaining": remaining,
+	})
 }
 
 func (t *TreeHoleHandler) CreateTreeHoleMessage(ctx *gin.Context) {
 	type TreeHoleMessageReq struct {
-		Content string `json:"content" binding:"required,min=1,max=1000"`
+		Content   string `json:"content" binding:"required,min=1,max=1000"`
+		Anonymous bool   `json:"anonymous"`
 	}
 
 	var req TreeHoleMessageReq
@@ -51,14 +102,61 @@ func (t *TreeHoleHandler) CreateTreeHoleMessage(ctx *gin.Context) {
 	sess := sessions.Default(ctx)
 	userIdInterface := sess.Get("userId")
 	if userIdInterface == nil {
-		UnauthorizedError(ctx)
+		// 游客：使用 Redis 基于 IP 的每日限额
+		cfg := config.ConfigFunction{}
+		_ = cfg.ReadConfiguration("config/config.json")
+		limit := 5
+		if cfg.Config.Guest.DailyTreeholeLimit > 0 {
+			limit = cfg.Config.Guest.DailyTreeholeLimit
+		}
+		// 连接 Redis
+		redisHost, redisPort, redisPwd := cfg.GetRedisConfig()
+		addr := fmt.Sprintf("%s:%s", redisHost, redisPort)
+		rdb := redis.NewClient(&redis.Options{Addr: addr, Password: redisPwd, DB: 0})
+		defer func() { _ = rdb.Close() }()
+
+		ip := ctx.ClientIP()
+		now := time.Now()
+		dateStr := now.Format("2006-01-02")
+		key := fmt.Sprintf("guest:treehole:%s:%s", ip, dateStr)
+		c := context.Background()
+
+		// 计数并设置在当天结束时过期
+		cnt, err := rdb.Incr(c, key).Result()
+		if err != nil {
+			ErrorResponse(ctx, http.StatusInternalServerError, "计数失败")
+			return
+		}
+		if cnt == 1 {
+			// 设置过期到当天 23:59:59
+			expireAt := time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, now.Location())
+			_ = rdb.ExpireAt(c, key, expireAt).Err()
+		}
+		if int(cnt) > limit {
+			// 回滚一次计数，避免超限后继续增长（可选）
+			_ = rdb.Decr(c, key).Err()
+			ErrorResponse(ctx, http.StatusTooManyRequests, "游客今日发言次数已用完")
+			return
+		}
+
+		// 发布（游客使用 user_id=0）
+		treeholeData := domain.TreeHole{Content: req.Content, UserId: 0}
+		if err := t.svc.CreateTreeHoleMessage(ctx, treeholeData); err != nil {
+			SystemError(ctx)
+			return
+		}
+		SuccessResponse(ctx, map[string]interface{}{"content": req.Content, "user_id": 0, "message": "发布成功(游客)"}, "发布成功")
 		return
 	}
 
 	userId := userIdInterface.(int64)
+	finalUserId := userId
+	if req.Anonymous {
+		finalUserId = 0
+	}
 	treeholeData := domain.TreeHole{
 		Content: req.Content,
-		UserId:  userId,
+		UserId:  finalUserId,
 	}
 
 	err := t.svc.CreateTreeHoleMessage(ctx, treeholeData)
@@ -69,7 +167,7 @@ func (t *TreeHoleHandler) CreateTreeHoleMessage(ctx *gin.Context) {
 
 	SuccessResponse(ctx, map[string]interface{}{
 		"content": req.Content,
-		"user_id": userId,
+		"user_id": finalUserId,
 		"message": "发布成功",
 	}, "发布成功")
 }

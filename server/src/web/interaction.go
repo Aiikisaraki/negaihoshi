@@ -23,6 +23,7 @@ func (h *InteractionHandler) RegisterRoutes(server *gin.Engine) {
 	g.POST("/like", h.Like)
 	g.DELETE("/like", h.Unlike)
 	g.GET("/likes/count", h.CountLikes)
+	g.GET("/likes/is-liked", h.IsLiked)
 
 	g.POST("/comment", h.AddComment)
 	g.GET("/comments", h.ListComments)
@@ -67,11 +68,15 @@ func (h *InteractionHandler) Like(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.svc.Like(c.Request.Context(), req.ContentId, req.IsPost, uid); err != nil {
+	// 使用唯一插入实现每个用户仅可点赞一次
+	err := h.svc.Like(c.Request.Context(), req.ContentId, req.IsPost, uid)
+	if err != nil {
 		ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	SuccessResponse(c, gin.H{"liked": true}, "点赞成功")
+	// 返回最新计数与状态
+	cnt, _ := h.svc.CountLikes(c.Request.Context(), req.ContentId, req.IsPost)
+	SuccessResponse(c, gin.H{"liked": true, "count": cnt}, "点赞成功")
 }
 
 func (h *InteractionHandler) Unlike(c *gin.Context) {
@@ -91,7 +96,8 @@ func (h *InteractionHandler) Unlike(c *gin.Context) {
 		ErrorResponse(c, http.StatusBadRequest, err.Error())
 		return
 	}
-	SuccessResponse(c, gin.H{"liked": false}, "已取消点赞")
+	cnt, _ := h.svc.CountLikes(c.Request.Context(), req.ContentId, req.IsPost)
+	SuccessResponse(c, gin.H{"liked": false, "count": cnt}, "已取消点赞")
 }
 
 func (h *InteractionHandler) CountLikes(c *gin.Context) {
@@ -103,6 +109,21 @@ func (h *InteractionHandler) CountLikes(c *gin.Context) {
 		return
 	}
 	SuccessResponse(c, gin.H{"count": cnt})
+}
+
+func (h *InteractionHandler) IsLiked(c *gin.Context) {
+	contentId, _ := strconv.ParseInt(c.Query("content_id"), 10, 64)
+	isPost := c.DefaultQuery("is_post", "false") == "true"
+	uid, ok := h.currentUserId(c)
+	if !ok {
+		return
+	}
+	liked, err := h.svc.IsLiked(c.Request.Context(), contentId, isPost, uid)
+	if err != nil {
+		ValidationError(c, err.Error())
+		return
+	}
+	SuccessResponse(c, gin.H{"liked": liked})
 }
 
 func (h *InteractionHandler) AddComment(c *gin.Context) {

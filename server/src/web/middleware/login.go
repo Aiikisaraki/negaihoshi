@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
@@ -40,15 +41,22 @@ func (l *LoginMiddlewareBuilder) Build() gin.HandlerFunc {
 		// 添加调试日志
 		fmt.Printf("中间件处理请求: %s %s\n", c.Request.Method, c.Request.URL.Path)
 
-		// 不需要登录校验的
-		for _, path := range l.paths {
-			if c.Request.URL.Path == path {
-				fmt.Printf("路径 %s 在忽略列表中，跳过认证\n", c.Request.URL.Path)
+		reqPath := c.Request.URL.Path
+		// 不需要登录校验的（支持 /* 前缀忽略）
+		for _, ig := range l.paths {
+			if strings.HasSuffix(ig, "/*") {
+				prefix := strings.TrimSuffix(ig, "/*")
+				if reqPath == prefix || strings.HasPrefix(reqPath, prefix+"/") {
+					fmt.Printf("路径前缀 %s* 在忽略列表中，跳过认证\n", prefix)
+					return
+				}
+			} else if reqPath == ig {
+				fmt.Printf("路径 %s 在忽略列表中，跳过认证\n", reqPath)
 				return
 			}
 		}
-		if c.Request.URL.Path == "/api/users/login" || c.Request.URL.Path == "/api/users/signup" {
-			fmt.Printf("登录/注册路径 %s，跳过认证\n", c.Request.URL.Path)
+		if reqPath == "/api/users/login" || reqPath == "/api/users/signup" {
+			fmt.Printf("登录/注册路径 %s，跳过认证\n", reqPath)
 			return
 		}
 

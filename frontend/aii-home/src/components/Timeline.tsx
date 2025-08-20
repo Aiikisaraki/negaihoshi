@@ -2,13 +2,15 @@
  * @Author: Aiikisaraki morikawa@kimisui56.work
  * @Date: 2025-05-25 10:45:45
  * @LastEditors: Aii如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-08-06 21:37:38
+ * @LastEditTime: 2025-08-20 01:44:31
  * @FilePath: \negaihoshi\frontend\aii-home\src\components\Timeline.tsx
  * @Description: 树洞时间线组件
  */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { treeholeApi, TreeHoleMessage } from '../requests/posts';
+import { treeholeApi, TreeHoleMessage, userApi } from '../requests/posts';
+import { Link } from 'react-router-dom';
+import AvatarImage from './AvatarImage';
 
 interface TimelineProps {
   refreshTrigger?: number;
@@ -20,8 +22,38 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [userCache, setUserCache] = useState<Record<number, { id: number; username?: string; nickname?: string; avatar?: string }>>({});
 
-  const loadMessages = async (pageNum: number = 1, reset: boolean = false) => {
+  const loadUsersForMessages = useCallback(async (list: TreeHoleMessage[]) => {
+    const needIds = Array.from(new Set(list.map(m => m.userId).filter(uid => uid > 0 && !(uid in userCache))));
+    if (needIds.length === 0) return;
+    try {
+      const results = await Promise.all(
+        needIds.map(id => userApi.getProfileById(id).catch(() => null))
+      );
+      setUserCache(prev => {
+        const next: Record<number, { id: number; username?: string; nickname?: string; avatar?: string }> = { ...prev };
+        results.forEach((resp, idx) => {
+          const uid = needIds[idx];
+          const ok = !!resp && typeof (resp as unknown as { code?: number }).code === 'number' && (resp as unknown as { code: number }).code === 200;
+          if (ok) {
+            const d = (resp as unknown as { data?: { username?: string; nickname?: string; avatar?: string } }).data || {};
+            next[uid] = {
+              id: uid,
+              username: d?.username,
+              nickname: d?.nickname,
+              avatar: d?.avatar,
+            };
+          }
+        });
+        return next;
+      });
+    } catch {
+      // ignore
+    }
+  }, [userCache]);
+
+  const loadMessages = useCallback(async (pageNum: number = 1, reset: boolean = false) => {
     try {
       setLoading(true);
       const response = await treeholeApi.getList(pageNum, 10);
@@ -29,7 +61,6 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
       if (response.code === 200) {
         const raw = (response.data as unknown as { messages?: unknown[] })?.messages || [];
 
-        // 兼容后端字段大小写（Id/Content/UserId/Ctime）
         const toMessage = (m: unknown): TreeHoleMessage => {
           const r = m as Record<string, unknown>;
           const id = (r.id ?? r.Id) as number | undefined;
@@ -49,8 +80,13 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
         
         if (reset) {
           setMessages(newMessages);
+          loadUsersForMessages(newMessages);
         } else {
-          setMessages(prev => [...prev, ...newMessages]);
+          setMessages(prev => {
+            const merged = [...prev, ...newMessages];
+            loadUsersForMessages(newMessages);
+            return merged;
+          });
         }
         
         setHasMore(newMessages.length === 10);
@@ -64,15 +100,13 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadUsersForMessages]);
 
-  // 初始加载和刷新
   useEffect(() => {
     loadMessages(1, true);
     setPage(1);
-  }, [refreshTrigger]);
+  }, [refreshTrigger, loadMessages]);
 
-  // 加载更多
   const loadMore = () => {
     if (!loading && hasMore) {
       const nextPage = page + 1;
@@ -81,7 +115,6 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
     }
   };
 
-  // 格式化时间
   const formatTime = (timeStr: string) => {
     const date = new Date(timeStr);
     const now = new Date();
@@ -124,33 +157,51 @@ export const Timeline = ({ refreshTrigger }: TimelineProps) => {
   return (
     <div className="space-y-4">
       <AnimatePresence>
-        {messages.map((message, index) => (
-          <motion.div
-            key={message.id}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ delay: index * 0.1 }}
-            className="p-5 rounded-2xl bg-white/20 backdrop-blur-xl hover:bg-white/30 transition-all duration-200 border border-white/30 shadow-lg"
-          >
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-10 h-10 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-cyan-500/20 rounded-full flex items-center justify-center">
-                <span className="text-sm text-blue-700">#</span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline space-x-3 mb-3">
-                  <span className="font-medium text-blue-800">匿名用户</span>
-                  <span className="text-sm text-blue-600">
-                    {formatTime(message.ctime)}
-                  </span>
+        {messages.map((message, index) => {
+          const u = message.userId > 0 ? userCache[message.userId] : undefined;
+          const displayName = u?.nickname || u?.username || '匿名用户';
+          return (
+            <motion.div
+              key={message.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ delay: index * 0.1 }}
+              className="p-5 rounded-2xl bg-white/20 backdrop-blur-xl hover:bg-white/30 transition-all duration-200 border border-white/30 shadow-lg"
+            >
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  {message.userId > 0 && u?.avatar ? (
+                    <Link to={`/profile/${message.userId}`} title={displayName}>
+                      <AvatarImage src={u.avatar || ''} className="w-10 h-10 rounded-full overflow-hidden" />
+                    </Link>
+                  ) : (
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500/20 via-purple-500/20 to-cyan-500/20 rounded-full flex items-center justify-center">
+                      <span className="text-sm text-blue-700">#</span>
+                    </div>
+                  )}
                 </div>
-                <p className="text-blue-700 leading-relaxed whitespace-pre-wrap break-words text-base">
-                  {message.content}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between mb-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {message.userId > 0 ? (
+                        <Link to={`/profile/${message.userId}`} className="font-medium text-blue-800 truncate" title={displayName}>
+                          {displayName}
+                        </Link>
+                      ) : (
+                        <span className="font-medium text-blue-800">匿名用户</span>
+                      )}
+                    </div>
+                    <span className="text-sm text-blue-600">{formatTime(message.ctime)}</span>
+                  </div>
+                  <p className="text-blue-700 leading-relaxed whitespace-pre-wrap break-words text-base">
+                    {message.content}
+                  </p>
+                </div>
               </div>
-            </div>
-          </motion.div>
-        ))}
+            </motion.div>
+          );
+        })}
       </AnimatePresence>
       
       {messages.length === 0 && !loading && (

@@ -8,7 +8,9 @@
  */
 import { useEffect, useState } from 'react';
 import { userApi } from '../requests/posts';
+import { Link } from 'react-router-dom';
 import AvatarImage from './AvatarImage';
+import { useToast } from './Toast';
 
 interface NavigationProps {
   isLoggedIn: boolean;
@@ -16,6 +18,7 @@ interface NavigationProps {
   onLogout: () => void;
   onProfileClick: () => void;
   userProfile?: {
+    id?: number;
     avatar?: string;
     nickname?: string;
     username?: string;
@@ -26,6 +29,8 @@ export function Navigation({ isLoggedIn, onLoginSuccess, onLogout, onProfileClic
   
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(userProfile?.avatar);
+  // 弹窗登录已废弃，统一跳转 /login
+  const toast = useToast();
 
   // 登录后或导航挂载时尝试获取最新头像
   useEffect(() => {
@@ -41,6 +46,8 @@ export function Navigation({ isLoggedIn, onLoginSuccess, onLogout, onProfileClic
       }
     })();
   }, [isLoggedIn]);
+
+  // 弹窗登录已废弃，统一跳转 /login
 
   return (
     <>
@@ -64,12 +71,12 @@ export function Navigation({ isLoggedIn, onLoginSuccess, onLogout, onProfileClic
             {/* 右侧用户区域 */}
             <div className="flex items-center space-x-4">
               {!isLoggedIn ? (
-                <button
-                  onClick={onLoginSuccess}
+                <a
+                  href="/login"
                   className="px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors"
                 >
                   登录
-                </button>
+                </a>
               ) : (
                 <>
                   {/* 用户头像和用户名 - 可点击显示菜单 */}
@@ -108,28 +115,27 @@ export function Navigation({ isLoggedIn, onLoginSuccess, onLogout, onProfileClic
                       <div className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-xl rounded-xl shadow-2xl border border-white/40 overflow-hidden z-50">
                       <div className="py-2">
                         {/* 个人中心 */}
-                        <button
-                          onClick={() => {
-                            onProfileClick();
-                            setShowUserMenu(false);
-                          }}
-                          className="w-full px-4 py-3 text-left text-gray-700 hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-3"
+                        <Link
+                          to={`/profile/${userProfile?.id ?? ''}`}
+                          onClick={() => setShowUserMenu(false)}
+                          className="w-full px-4 py-3 text-gray-700 hover:bg-blue-50 transition-colors duration-200 flex items-center gap-3"
                         >
-                          <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                           </svg>
                           <span>个人中心</span>
-                        </button>
+                        </Link>
                         {/* 编辑个人信息 */}
-                        <button
-                          onClick={() => { window.location.href = '/profile?edit=1'; setShowUserMenu(false); }}
-                          className="w-full px-4 py-3 text-left text-gray-700 hover:bg-blue-50 transition-colors duration-200 flex items-center space-x-3"
+                        <Link
+                          to={`/profile/${userProfile?.id ?? ''}?edit=1`}
+                          onClick={() => setShowUserMenu(false)}
+                          className="w-full px-4 py-3 text-gray-700 hover:bg-blue-50 transition-colors duration-200 flex items-center gap-3"
                         >
-                          <svg className="w-5 h-5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5h2m-1 14v-7m-7 7h14M5 12h14M5 8h14" />
                           </svg>
                           <span>编辑个人信息</span>
-                        </button>
+                        </Link>
                         {/* 分割线 */}
                         <div className="border-t border-gray-200 my-1"></div>
                         {/* 登出按钮 */}
@@ -155,6 +161,8 @@ export function Navigation({ isLoggedIn, onLoginSuccess, onLogout, onProfileClic
           </div>
         </div>
       </nav>
+
+      {/* 登录弹窗已移除 */}
     </>
   );
 }

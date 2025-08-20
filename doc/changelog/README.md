@@ -4,6 +4,7 @@
 
 ## 变更日志列表
 
+- [前后端集成与改进更新（增补：资料/互动/游客树洞/匿名/额度显示）](frontend-backend-integration-and-improvements.md) - 2025-08-20
 - [前后端集成与改进更新](frontend-backend-integration-and-improvements.md) - 2025-08-14
 - [API文档更新](api-documentation.md) - 2025-05-25
 - [背景图片功能](background-image-feature.md) - 2025-05-20

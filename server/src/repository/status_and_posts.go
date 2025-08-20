@@ -15,6 +15,8 @@ import (
 
 	// "time"
 
+	"time"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -69,6 +71,7 @@ func (s *StatusAndPostsRepository) GetPosts(c *gin.Context, id int64) (domain.Po
 		Title:   res.Title,
 		Content: res.Content,
 		UserId:  res.UserId,
+		Ctime:   time.UnixMilli(res.Ctime),
 	}, err
 }
 
@@ -78,6 +81,7 @@ func (s *StatusAndPostsRepository) GetStatus(c *gin.Context, id int64) (domain.S
 		Id:      res.Id,
 		Content: res.Content,
 		UserId:  res.UserId,
+		Ctime:   time.UnixMilli(res.Ctime),
 	}, err
 }
 
@@ -94,6 +98,7 @@ func (s *StatusAndPostsRepository) FindStatusByUser(ctx *gin.Context, uid int64)
 				Id:      v.Id,
 				Content: v.Content,
 				UserId:  v.UserId,
+				Ctime:   time.UnixMilli(v.Ctime),
 			})
 		}
 		return status
@@ -114,6 +119,7 @@ func (s *StatusAndPostsRepository) FindPostsByUser(ctx *gin.Context, uid int64) 
 				Title:   v.Title,
 				Content: v.Content,
 				UserId:  v.UserId,
+				Ctime:   time.UnixMilli(v.Ctime),
 			})
 		}
 		return posts
@@ -133,6 +139,7 @@ func (s *StatusAndPostsRepository) GetAllStatus(c *gin.Context) ([]domain.Status
 				Id:      v.Id,
 				Content: v.Content,
 				UserId:  v.UserId,
+				Ctime:   time.UnixMilli(v.Ctime),
 			})
 		}
 		return status
@@ -153,6 +160,7 @@ func (s *StatusAndPostsRepository) GetAllPosts(c *gin.Context) ([]domain.Posts, 
 				Title:   v.Title,
 				Content: v.Content,
 				UserId:  v.UserId,
+				Ctime:   time.UnixMilli(v.Ctime),
 			})
 		}
 		return posts

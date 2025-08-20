@@ -23,7 +23,8 @@ func (s *InteractionService) Like(ctx context.Context, contentId int64, isPost b
 	if contentId <= 0 || userId <= 0 {
 		return ErrInvalidContent
 	}
-	return s.dao.AddLike(ctx, contentId, isPost, userId)
+	_, err := s.dao.AddLikeOnce(ctx, contentId, isPost, userId)
+	return err
 }
 
 func (s *InteractionService) Unlike(ctx context.Context, contentId int64, isPost bool, userId int64) error {
@@ -38,6 +39,13 @@ func (s *InteractionService) CountLikes(ctx context.Context, contentId int64, is
 		return 0, ErrInvalidContent
 	}
 	return s.dao.CountLikes(ctx, contentId, isPost)
+}
+
+func (s *InteractionService) IsLiked(ctx context.Context, contentId int64, isPost bool, userId int64) (bool, error) {
+	if contentId <= 0 || userId <= 0 {
+		return false, ErrInvalidContent
+	}
+	return s.dao.HasLiked(ctx, contentId, isPost, userId)
 }
 
 func (s *InteractionService) AddComment(ctx context.Context, contentId int64, isPost bool, userId int64, content string) error {

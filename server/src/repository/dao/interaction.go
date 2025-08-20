@@ -5,13 +5,14 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type Like struct {
 	Id        int64 `gorm:"primaryKey;autoIncrement"`
-	ContentId int64 `gorm:"index:idx_content"`
-	IsPost    bool  `gorm:"index:idx_content"`
-	UserId    int64 `gorm:"index:idx_user"`
+	ContentId int64 `gorm:"index:idx_content;uniqueIndex:uidx_like"`
+	IsPost    bool  `gorm:"index:idx_content;uniqueIndex:uidx_like"`
+	UserId    int64 `gorm:"index:idx_user;uniqueIndex:uidx_like"`
 	Ctime     int64 `gorm:"autoCreateTime:milli"`
 }
 
@@ -47,6 +48,15 @@ func (d *InteractionDAO) AddLike(ctx context.Context, contentId int64, isPost bo
 	return d.db.WithContext(ctx).Create(&Like{ContentId: contentId, IsPost: isPost, UserId: userId, Ctime: time.Now().UnixMilli()}).Error
 }
 
+// AddLikeOnce 原子插入，若已存在则不插入并返回 created=false
+func (d *InteractionDAO) AddLikeOnce(ctx context.Context, contentId int64, isPost bool, userId int64) (created bool, err error) {
+	res := d.db.WithContext(ctx).Clauses(clause.OnConflict{
+		Columns:   []clause.Column{{Name: "content_id"}, {Name: "is_post"}, {Name: "user_id"}},
+		DoNothing: true,
+	}).Create(&Like{ContentId: contentId, IsPost: isPost, UserId: userId, Ctime: time.Now().UnixMilli()})
+	return res.RowsAffected > 0, res.Error
+}
+
 func (d *InteractionDAO) RemoveLike(ctx context.Context, contentId int64, isPost bool, userId int64) error {
 	return d.db.WithContext(ctx).Where("content_id=? AND is_post=? AND user_id=?", contentId, isPost, userId).Delete(&Like{}).Error
 }
@@ -55,6 +65,12 @@ func (d *InteractionDAO) CountLikes(ctx context.Context, contentId int64, isPost
 	var count int64
 	err := d.db.WithContext(ctx).Model(&Like{}).Where("content_id=? AND is_post=?", contentId, isPost).Count(&count).Error
 	return count, err
+}
+
+func (d *InteractionDAO) HasLiked(ctx context.Context, contentId int64, isPost bool, userId int64) (bool, error) {
+	var count int64
+	err := d.db.WithContext(ctx).Model(&Like{}).Where("content_id=? AND is_post=? AND user_id=?", contentId, isPost, userId).Count(&count).Error
+	return count > 0, err
 }
 
 func (d *InteractionDAO) AddComment(ctx context.Context, contentId int64, isPost bool, userId int64, content string) error {

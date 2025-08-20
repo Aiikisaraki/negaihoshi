@@ -1,56 +1,92 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { postApi } from '../requests/posts';
 import { MarkdownEditor } from '../components/MarkdownEditor';
+import apiClient from '../requests/api';
 
 export function CreateStatusPage() {
   const [content, setContent] = useState('');
   const [transferToWP, setTransferToWP] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isEdit, setIsEdit] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const edit = searchParams.get('edit') === '1';
+    const idStr = searchParams.get('id');
+    if (edit && idStr) {
+      const idNum = parseInt(idStr, 10);
+      if (!Number.isNaN(idNum)) {
+        setIsEdit(true);
+        setEditId(idNum);
+        (async () => {
+          try {
+            const resp: any = await apiClient.get(`/posts/view/${idNum}?isPost=false`);
+            if (resp.code === 200 && resp.data) {
+              const data = resp.data as any;
+              setContent((data.content ?? data.Content ?? '') as string);
+            }
+          } catch (e) {
+            setError('加载说说内容失败');
+          }
+        })();
+      }
+    }
+  }, [searchParams]);
+
+  // 同步浏览器标题
+  useEffect(() => {
+    const siteName = '星の海の物語';
+    if (isEdit) {
+      const short = (content || '').replace(/\s+/g, ' ').slice(0, 20) || '未命名';
+      document.title = `编辑说说: ${short} —— ${siteName}`;
+    } else {
+      document.title = `发布说说 —— ${siteName}`;
+    }
+  }, [isEdit, content]);
 
   // 统计有效字符（排除 markdown 控制符）
   const countEffectiveChars = (md: string) => {
     const stripped = md
-      .replace(/`{1,3}[\s\S]*?`{1,3}/g, '') // 代码块与行内代码
-      .replace(/!\[[^\]]*\]\([^\)]*\)/g, '') // 图片
-      .replace(/\[[^\]]*\]\([^\)]*\)/g, '') // 链接
-      .replace(/[*_~#>`-]/g, '') // 常见标记
-      .replace(/\s+/g, ''); // 空白
+      .replace(/`{1,3}[^`]*`{1,3}/g, '')
+      .replace(/!\[[^\]]*\]\([^\)]*\)/g, '')
+      .replace(/\[[^\]]*\]\([^\)]*\)/g, '')
+      .replace(/[*_~#>`-]/g, '')
+      .replace(/\s+/g, '');
     return stripped.length;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!content.trim()) {
       setError('请输入说说内容');
       return;
     }
-    
-    // 检查有效字符数是否超过200
     const effectiveChars = countEffectiveChars(content);
     if (effectiveChars > 200) {
       setError(`说说有效字符数不可超过200（当前 ${effectiveChars}）`);
       return;
     }
-    
     setIsLoading(true);
     setError('');
-    
     try {
-      const response = await postApi.createStatus(content.trim(), transferToWP);
-      
+      let response: any;
+      if (isEdit && editId) {
+        response = await postApi.editStatus(editId, content.trim(), transferToWP);
+      } else {
+        response = await postApi.createStatus(content.trim(), transferToWP);
+      }
       if (response.code === 200) {
-        // 发布成功，返回到个人中心的说说管理页面
         navigate('/profile?tab=status');
       } else {
-        setError(response.message || '发布失败');
+        setError(response.message || '提交失败');
       }
     } catch (err) {
       setError('网络错误，请稍后重试');
-      console.error('发布失败:', err);
+      console.error('提交失败:', err);
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +97,7 @@ export function CreateStatusPage() {
       {/* 顶部导航栏 */}
       <div className="w-full bg-white/70 backdrop-blur-md border-b border-white/60">
         <div className="max-w-6xl mx-auto flex items-center justify-between px-4 py-3">
-          <h1 className="text-xl font-semibold text-blue-800">发布说说</h1>
+          <h1 className="text-xl font-semibold text-blue-800">{isEdit ? '编辑说说' : '发布说说'}</h1>
           <Link 
             to="/profile?tab=status" 
             className="text-blue-600 hover:text-blue-700 transition-colors"
@@ -73,14 +109,12 @@ export function CreateStatusPage() {
 
       <div className="max-w-6xl mx-auto p-4">
         <div className="bg-white/80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-white/40">
-          <h2 className="text-2xl font-bold text-blue-800 mb-6">新说说</h2>
-          
+          <h2 className="text-2xl font-bold text-blue-800 mb-6">{isEdit ? '更新说说' : '新说说'}</h2>
           {error && (
             <div className="p-4 rounded-xl bg-red-500/20 border border-red-500/30 text-red-700 text-sm mb-6">
               {error}
             </div>
           )}
-          
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label className="block text-blue-800 font-medium mb-2">说说内容</label>
@@ -94,7 +128,6 @@ export function CreateStatusPage() {
                 dense
               />
             </div>
-            
             <div className="flex items-center">
               <label className="flex items-center gap-2 text-blue-800 cursor-pointer">
                 <input
@@ -107,7 +140,6 @@ export function CreateStatusPage() {
                 <span>同步到 WordPress</span>
               </label>
             </div>
-            
             <div className="flex justify-end gap-4 pt-3">
               <Link
                 to="/profile?tab=status"
@@ -124,7 +156,7 @@ export function CreateStatusPage() {
                          font-medium transition-all duration-200 shadow-lg 
                          disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isLoading ? '发布中...' : '发布说说'}
+                {isLoading ? (isEdit ? '更新中...' : '发布中...') : (isEdit ? '更新说说' : '发布说说')}
               </button>
             </div>
           </form>

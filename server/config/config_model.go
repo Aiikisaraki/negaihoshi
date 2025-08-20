@@ -3,7 +3,10 @@ package config
 type Config struct {
 	FrontendPrefix []string `json:"frontend-prefix"`
 	ServerPort     string   `json:"server-port"`
-	ApiDocs        struct {
+	Guest          struct {
+		DailyTreeholeLimit int `json:"daily-treehole-limit"`
+	} `json:"guest"`
+	ApiDocs struct {
 		Enabled     bool   `json:"enabled"`
 		Title       string `json:"title"`
 		Description string `json:"description"`
@@ -27,7 +30,7 @@ type Config struct {
 		Password string `json:"password"`
 	} `json:"redis"`
 	Storage struct {
-		Type string `json:"type"` // "local", "tencent-cos", "aliyun-oss"
+		Type  string `json:"type"` // "local", "tencent-cos", "aliyun-oss"
 		Local struct {
 			Path string `json:"path"`
 		} `json:"local"`

@@ -47,8 +47,13 @@ export interface StatusItem {
 // 树洞API
 export const treeholeApi = {
   // 创建树洞消息
-  create: async (content: string): Promise<ApiResponse<TreeHoleMessage>> => {
-    return apiClient.post('/treehole/create', { content });
+  create: async (content: string, anonymous?: boolean): Promise<ApiResponse<TreeHoleMessage>> => {
+    return apiClient.post('/treehole/create', { content, anonymous: !!anonymous });
+  },
+
+  // 游客配额
+  guestQuota: async (): Promise<ApiResponse<{ limit: number; used: number; remaining: number }>> => {
+    return apiClient.get('/treehole/guest-quota');
   },
 
   // 获取树洞消息列表

@@ -14,6 +14,7 @@ import (
 	"negaihoshi/server/src/request"
 	"negaihoshi/server/src/service"
 	"net/http"
+	"strconv"
 
 	// "strconv"
 
@@ -36,6 +37,8 @@ func (t *StatusAndPostsHandler) RegisterStatusAndPostsRoutes(server *gin.Engine)
 	tg.POST("/create", t.CreateStatusAndPostsMessage)
 	tg.PATCH("/edit", t.EditStatusAndPostsMessage)
 	tg.GET("/view/:id", t.GetStatusAndPostsMessage)
+	// 兼容 POST /api/posts/view { id, isPost }
+	tg.POST("/view", t.GetStatusAndPostsMessage)
 	tg.GET("/:uid", t.GetUserStatusAndPostsMessageList)
 	tg.GET("/listAll", t.GetStatusAndPostsMessageList)
 	tg.DELETE("/delete/:id", t.DeleteStatusAndPostsMessage)
@@ -164,28 +167,52 @@ func (t *StatusAndPostsHandler) GetStatusAndPostsMessage(ctx *gin.Context) {
 		Id     int64 `json:"id"`
 		IsPost bool  `json:"isPost"`
 	}
-	var req GetMessageReq
-	var err error
-	if err = ctx.Bind(&req); err != nil {
-		ctx.String(http.StatusOK, "系统错误")
+
+	var id int64
+	isPost := false
+
+	if ctx.Request.Method == http.MethodGet {
+		// GET /api/posts/view/:id?isPost=true
+		idStr := ctx.Param("id")
+		if idStr == "" {
+			ValidationError(ctx, "缺少ID")
+			return
+		}
+		v, err := strconv.ParseInt(idStr, 10, 64)
+		if err != nil {
+			ValidationError(ctx, "ID格式不正确")
+			return
+		}
+		id = v
+		isPost = ctx.DefaultQuery("isPost", "false") == "true"
+	} else {
+		// POST /api/posts/view  JSON: { id, isPost }
+		var req GetMessageReq
+		if err := ctx.Bind(&req); err != nil {
+			SystemError(ctx)
+			return
+		}
+		id = req.Id
+		isPost = req.IsPost
+	}
+
+	if isPost {
+		post, err := t.svc.GetPostFromThisSite(ctx, id)
+		if err != nil {
+			SystemError(ctx)
+			return
+		}
+		SuccessResponse(ctx, post)
 		return
 	}
-	if req.IsPost {
-		post, err := t.svc.GetPostFromThisSite(ctx, req.Id)
-		if err != nil {
-			ctx.String(http.StatusOK, "系统错误")
-			return
-		}
-		ctx.JSON(http.StatusOK, post)
-	} else {
-		status, err := t.svc.GetStatusFromThisSite(ctx, req.Id)
-		if err != nil {
-			ctx.String(http.StatusOK, "系统错误")
-			return
-		}
-		ctx.JSON(http.StatusOK, status)
+	status, err := t.svc.GetStatusFromThisSite(ctx, id)
+	if err != nil {
+		SystemError(ctx)
+		return
 	}
+	SuccessResponse(ctx, status)
 }
+
 func (t *StatusAndPostsHandler) GetUserStatusAndPostsMessageList(ctx *gin.Context) {
 	type GetMessageListReq struct {
 		UserId int64 `json:"userId"`
