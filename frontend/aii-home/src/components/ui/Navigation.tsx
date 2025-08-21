@@ -27,7 +27,7 @@ export function Navigation({ isLoggedIn, onLogout, userProfile }: NavigationProp
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(userProfile?.avatar);
   // 弹窗登录已废弃，统一跳转 /login
-  const _toast = useToast();
+  
 
   // 登录后或导航挂载时尝试获取最新头像
   useEffect(() => {
