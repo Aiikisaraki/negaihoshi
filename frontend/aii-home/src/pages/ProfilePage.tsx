@@ -1,13 +1,11 @@
 import { useEffect, useState } from 'react';
 import { userApi } from '../requests/posts';
-import { userApi } from '../requests/posts';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useToast } from '../components/feedback/Toast';
 import { ProfilePanel } from '../components/user/ProfilePanel';
 import apiClient from '../requests/api';
 import AvatarImage from '../components/user/AvatarImage';
 import { interactApi } from '../requests/interact';
-// import { useToast } from '../components/feedback/Toast';
 
 // 个人资料数据类型
 interface ProfileData {
@@ -66,6 +64,25 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
 
   const isOwner = !routeUserId || (currentUserId !== undefined && routeUserId === currentUserId);
 
+  // 后端返回的数据类型别名（兼容大小写字段）
+  type BackendPost = {
+    id?: number; Id?: number;
+    title?: string; Title?: string;
+    content?: string; Content?: string;
+    userId?: number; UserId?: number;
+    ctime?: string; Ctime?: string;
+    utime?: string; Utime?: string;
+  };
+  type BackendStatus = {
+    id?: number; Id?: number;
+    content?: string; Content?: string;
+    userId?: number; UserId?: number;
+    ctime?: string; Ctime?: string;
+    utime?: string; Utime?: string;
+  };
+  type LikeCountResponse = { code: number; data: { count?: number } };
+  type IsLikedResponse = { code: number; data: { liked?: boolean } };
+
   // 识别当前登录用户ID：优先 localStorage.userProfile.id，其次 props.profileData.id
   useEffect(() => {
     try {
@@ -77,7 +94,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
           return;
         }
       }
-    } catch {}
+    } catch (e) { console.debug('读取本地用户信息失败', e); }
     if (profileData?.id && typeof profileData.id === 'number') {
       setCurrentUserId(profileData.id);
     }
@@ -130,7 +147,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
           if (self.code === 200 && self.data) {
             const latest = self.data as unknown as ProfileData;
             setViewProfile(latest);
-            try { localStorage.setItem('userProfile', JSON.stringify(latest)); } catch {}
+            try { localStorage.setItem('userProfile', JSON.stringify(latest)); } catch (e) { console.debug('写入本地用户信息失败', e); }
             return;
           } else {
             // 401 或其他错误时退回公开资料
@@ -141,7 +158,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
               }
             }
             // 清理本地登录标记，避免后续继续误判
-            try { localStorage.removeItem('isLoggedIn'); } catch {}
+            try { localStorage.removeItem('isLoggedIn'); } catch (e) { console.debug('清理登录标记失败', e); }
           }
         }
         // 他人资料或无法判定本人：按路由ID拉取（公开）
@@ -159,7 +176,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
           if (self.code === 200 && self.data) {
             const latest = self.data as unknown as ProfileData;
             setViewProfile(latest);
-            try { localStorage.setItem('userProfile', JSON.stringify(latest)); } catch {}
+            try { localStorage.setItem('userProfile', JSON.stringify(latest)); } catch (e) { console.debug('写入本地用户信息失败', e); }
           }
         }
       } catch (e) {
@@ -171,7 +188,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
               setViewProfile(pub.data as ProfileData);
             }
           }
-        } catch {}
+        } catch (e2) { console.debug('兜底公开资料失败', e2); }
         console.debug('加载用户资料失败', e);
       }
     })();
@@ -212,7 +229,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
           if (resp.code === 200 && resp.data?.avatar_url) {
             setViewProfile(prev => ({ ...prev, avatar: resp.data!.avatar_url }));
           }
-        } catch {}
+        } catch (e) { console.debug('获取头像失败', e); }
       })();
     }
   }, [isOwner, showEditPanel]);
@@ -228,7 +245,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
         ]);
         if (followingResp.code === 200) setFollowingCount(followingResp.data.count || 0);
         if (followersResp.code === 200) setFollowersCount(followersResp.data.count || 0);
-      } catch {}
+      } catch (e) { console.debug('统计关注/粉丝失败', e); }
     })();
   }, [viewProfile.id]);
 
@@ -236,10 +253,11 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const resp = await apiClient.get('/posts/listAll?isPost=true') as { code: number; data: any };
+      const resp = await apiClient.get('/posts/listAll?isPost=true') as { code: number; data: { posts?: BackendPost[] } | BackendPost[] };
       if (resp.code === 200) {
-        const raw = Array.isArray(resp.data) ? resp.data : (resp.data.posts || []);
-        const normalized: PostItem[] = raw.map((p: any) => ({
+        const raw: BackendPost[] = Array.isArray(resp.data) ? resp.data : (resp.data.posts || []);
+        type PartialPost = { id?: number; title: string; content: string; userId?: number; ctime?: string; utime?: string };
+        const mapped: PartialPost[] = raw.map((p: BackendPost) => ({
           id: p.id ?? p.Id,
           title: p.title ?? p.Title ?? '',
           content: p.content ?? p.Content ?? '',
@@ -247,21 +265,23 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
           ctime: p.ctime ?? p.Ctime,
           utime: p.utime ?? p.Utime,
         }));
-        const userPosts = normalized.filter((post: any) => post.userId === viewProfile.id);
+        const normalized: PostItem[] = mapped.filter((p): p is PostItem => typeof p.id === 'number' && typeof p.userId === 'number');
+        const userPosts = normalized.filter((post: PostItem) => post.userId === viewProfile.id);
         setPosts(userPosts);
         // 拉取点赞计数与状态（仅在查看他人时有意义，但本地缓存不影响）
         const ids = userPosts.map((p: PostItem) => p.id);
-        const ids = userPosts.map((p: PostItem) => p.id);
-        const [counts, liked] = await Promise.all([
-          Promise.all(ids.map(id => interactApi.likeCount(id, true).catch(() => ({ code: 500, data: { count: 0 } } as any)))) ,
-          isLoggedIn ? Promise.all(ids.map(id => interactApi.isLiked(id, true).catch(() => ({ code: 401, data: { liked: false } } as any)))) : Promise.resolve(ids.map(() => ({ code: 401, data: { liked: false } } as any)))
-        ]);
+        const countPromises: Promise<LikeCountResponse>[] = ids.map(id =>
+          interactApi.likeCount(id, true).catch((): LikeCountResponse => ({ code: 500, data: { count: 0 } }))
+        );
+        const likedPromises: Promise<IsLikedResponse>[] = isLoggedIn
+          ? ids.map(id => interactApi.isLiked(id, true).catch((): IsLikedResponse => ({ code: 401, data: { liked: false } })))
+          : ids.map(() => Promise.resolve({ code: 401, data: { liked: false } } as IsLikedResponse));
+        const [counts, liked] = await Promise.all([Promise.all(countPromises), Promise.all(likedPromises)]);
         const countMap: Record<number, number> = {};
         const likedMap: Record<number, boolean> = {};
         ids.forEach((id: number, idx: number) => {
-        ids.forEach((id: number, idx: number) => {
-          countMap[id] = (counts[idx].code === 200 && (counts[idx].data as any)?.count) ? (counts[idx].data as any).count : 0;
-          likedMap[id] = (liked[idx].code === 200 && (liked[idx].data as any)?.liked) ? true : false;
+          countMap[id] = (counts[idx].code === 200 && counts[idx].data?.count) ? counts[idx].data.count : 0;
+          likedMap[id] = (liked[idx].code === 200 && liked[idx].data?.liked) ? true : false;
         });
         setPostLikeCount(countMap);
         setPostLiked(likedMap);
@@ -277,31 +297,34 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
   const fetchStatus = async () => {
     setLoading(true);
     try {
-      const resp = await apiClient.get('/posts/listAll?isPost=false') as { code: number; data: any };
+      const resp = await apiClient.get('/posts/listAll?isPost=false') as { code: number; data: { status?: BackendStatus[] } | BackendStatus[] };
       if (resp.code === 200) {
-        const raw = Array.isArray(resp.data) ? resp.data : (resp.data.status || []);
-        const normalized: StatusItem[] = raw.map((s: any) => ({
+        const raw: BackendStatus[] = Array.isArray(resp.data) ? resp.data : (resp.data.status || []);
+        type PartialStatus = { id?: number; content: string; userId?: number; ctime?: string; utime?: string };
+        const mapped: PartialStatus[] = raw.map((s: BackendStatus) => ({
           id: s.id ?? s.Id,
           content: s.content ?? s.Content ?? '',
           userId: s.userId ?? s.UserId,
           ctime: s.ctime ?? s.Ctime,
           utime: s.utime ?? s.Utime,
         }));
-        const userStatus = normalized.filter((status: any) => status.userId === viewProfile.id);
+        const normalized: StatusItem[] = mapped.filter((s): s is StatusItem => typeof s.id === 'number' && typeof s.userId === 'number');
+        const userStatus = normalized.filter((status: StatusItem) => status.userId === viewProfile.id);
         setStatusList(userStatus);
         // 拉取点赞计数与状态
         const ids = userStatus.map((s: StatusItem) => s.id);
-        const ids = userStatus.map((s: StatusItem) => s.id);
-        const [counts, liked] = await Promise.all([
-          Promise.all(ids.map(id => interactApi.likeCount(id, false).catch(() => ({ code: 500, data: { count: 0 } } as any)))),
-          isLoggedIn ? Promise.all(ids.map(id => interactApi.isLiked(id, false).catch(() => ({ code: 401, data: { liked: false } } as any)))) : Promise.resolve(ids.map(() => ({ code: 401, data: { liked: false } } as any)))
-        ]);
+        const countPromises: Promise<LikeCountResponse>[] = ids.map(id =>
+          interactApi.likeCount(id, false).catch((): LikeCountResponse => ({ code: 500, data: { count: 0 } }))
+        );
+        const likedPromises: Promise<IsLikedResponse>[] = isLoggedIn
+          ? ids.map(id => interactApi.isLiked(id, false).catch((): IsLikedResponse => ({ code: 401, data: { liked: false } })))
+          : ids.map(() => Promise.resolve({ code: 401, data: { liked: false } } as IsLikedResponse));
+        const [counts, liked] = await Promise.all([Promise.all(countPromises), Promise.all(likedPromises)]);
         const countMap: Record<number, number> = {};
         const likedMap: Record<number, boolean> = {};
         ids.forEach((id: number, idx: number) => {
-        ids.forEach((id: number, idx: number) => {
-          countMap[id] = (counts[idx].code === 200 && (counts[idx].data as any)?.count) ? (counts[idx].data as any).count : 0;
-          likedMap[id] = (liked[idx].code === 200 && (liked[idx].data as any)?.liked) ? true : false;
+          countMap[id] = (counts[idx].code === 200 && counts[idx].data?.count) ? counts[idx].data.count : 0;
+          likedMap[id] = (liked[idx].code === 200 && liked[idx].data?.liked) ? true : false;
         });
         setStatusLikeCount(countMap);
         setStatusLiked(likedMap);
@@ -328,10 +351,10 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
     (async () => {
       if (!viewProfile.id) return;
       try {
-        const postLikes = await Promise.all(posts.map(p => interactApi.likeCount(p.id, true)));
-        const statusLikes = await Promise.all(statusList.map(s => interactApi.likeCount(s.id, false)));
-        const sum = postLikes.reduce((acc, r) => acc + ((r.code === 200 && r.data && (r.data as any).count) ? (r.data as any).count : 0), 0)
-          + statusLikes.reduce((acc, r) => acc + ((r.code === 200 && r.data && (r.data as any).count) ? (r.data as any).count : 0), 0);
+        const postLikes: LikeCountResponse[] = await Promise.all(posts.map(p => interactApi.likeCount(p.id, true)));
+        const statusLikes: LikeCountResponse[] = await Promise.all(statusList.map(s => interactApi.likeCount(s.id, false)));
+        const sum = postLikes.reduce((acc, r) => acc + ((r.code === 200 && r.data && r.data.count) ? r.data.count : 0), 0)
+          + statusLikes.reduce((acc, r) => acc + ((r.code === 200 && r.data && r.data.count) ? r.data.count : 0), 0);
         setTotalLikesReceived(sum);
       } catch (e) {
         console.debug('计算被点赞数失败', e);
@@ -358,13 +381,13 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
       try {
         const [likeResp, likedResp, commentsResp] = await Promise.all([
           interactApi.likeCount(sid, false),
-          interactApi.isLiked(sid, false).catch(() => ({ code: 401, data: { liked: false } } as any)),
-          interactApi.listComments(sid, false, 1, 10)
+          interactApi.isLiked(sid, false).catch((): IsLikedResponse => ({ code: 401, data: { liked: false } })),
+          interactApi.listComments(sid, false, 1, 10) as Promise<{ code: number; data: { comments?: Array<{ id: number; content: string; user_id: number; ctime: number }> } }>
         ]);
-        if (likeResp.code === 200) setStatusLikeCount(prev => ({ ...prev, [sid]: (likeResp.data as any).count || 0 }));
-        if (likedResp.code === 200) setStatusLiked(prev => ({ ...prev, [sid]: !!(likedResp.data as any)?.liked }));
+        if ((likeResp as LikeCountResponse).code === 200) setStatusLikeCount(prev => ({ ...prev, [sid]: (likeResp as LikeCountResponse).data.count || 0 }));
+        if ((likedResp as IsLikedResponse).code === 200) setStatusLiked(prev => ({ ...prev, [sid]: !!(likedResp as IsLikedResponse).data.liked }));
         if (commentsResp.code === 200) {
-          const items = (commentsResp.data.comments || []) as any[];
+          const items = (commentsResp.data.comments || []);
           setStatusComments(prev => ({ ...prev, [sid]: items.map(i => ({ id: i.id, content: i.content, user_id: i.user_id, ctime: i.ctime })) }));
         }
       } catch (e) { console.debug('加载说说互动失败', e); }
@@ -422,9 +445,9 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
     if (!text) return;
     try {
       await interactApi.addComment(sid, false, text);
-      const commentsResp = await interactApi.listComments(sid, false, 1, 10);
+      const commentsResp = await interactApi.listComments(sid, false, 1, 10) as { code: number; data: { comments?: Array<{ id: number; content: string; user_id: number; ctime: number }> } };
       if (commentsResp.code === 200) {
-        const items = (commentsResp.data.comments || []) as any[];
+        const items = (commentsResp.data.comments || []);
         setStatusComments(prev => ({ ...prev, [sid]: items.map(i => ({ id: i.id, content: i.content, user_id: i.user_id, ctime: i.ctime })) }));
       }
       setStatusCommentText(prev => ({ ...prev, [sid]: '' }));
@@ -436,9 +459,9 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
     if (!text) return;
     try {
       await interactApi.addComment(pid, true, text);
-      const commentsResp = await interactApi.listComments(pid, true, 1, 10);
+      const commentsResp = await interactApi.listComments(pid, true, 1, 10) as { code: number; data: { comments?: Array<{ id: number; content: string; user_id: number; ctime: number }> } };
       if (commentsResp.code === 200) {
-        const items = (commentsResp.data.comments || []) as any[];
+        const items = (commentsResp.data.comments || []);
         setPostComments(prev => ({ ...prev, [pid]: items.map(i => ({ id: i.id, content: i.content, user_id: i.user_id, ctime: i.ctime })) }));
       }
       setPostCommentText(prev => ({ ...prev, [pid]: '' }));
@@ -449,28 +472,28 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
   const deletePost = async (pid: number) => {
     if (!isOwner) return;
     try {
-      const resp: any = await apiClient.delete(`/posts/delete/${pid}`, { data: { id: pid, isPost: true } });
+      const resp = await apiClient.delete(`/posts/delete/${pid}`, { data: { id: pid, isPost: true } }) as { code?: number; message?: string };
       if (resp.code === 200 || typeof resp === 'string' || resp?.message) {
         toast.show('删除文章成功', { type: 'success' });
         fetchPosts();
       } else {
         toast.show('删除文章失败', { type: 'error' });
       }
-    } catch (e) {
+    } catch {
       toast.show('删除文章失败', { type: 'error' });
     }
   };
   const deleteStatus = async (sid: number) => {
     if (!isOwner) return;
     try {
-      const resp: any = await apiClient.delete(`/posts/delete/${sid}`, { data: { id: sid, isPost: false } });
+      const resp = await apiClient.delete(`/posts/delete/${sid}`, { data: { id: sid, isPost: false } }) as { code?: number; message?: string };
       if (resp.code === 200 || typeof resp === 'string' || resp?.message) {
         toast.show('删除说说成功', { type: 'success' });
         fetchStatus();
       } else {
         toast.show('删除说说失败', { type: 'error' });
       }
-    } catch (e) {
+    } catch {
       toast.show('删除说说失败', { type: 'error' });
     }
   };
