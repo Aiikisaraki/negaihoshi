@@ -10,7 +10,6 @@ import { useEffect, useState } from 'react';
 import { userApi } from '../../requests/posts';
 import { Link } from 'react-router-dom';
 import AvatarImage from '../user/AvatarImage';
-import { useToast } from '../feedback/Toast';
 
 interface NavigationProps {
   isLoggedIn: boolean;

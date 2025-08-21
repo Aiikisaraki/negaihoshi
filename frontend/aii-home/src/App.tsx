@@ -122,42 +122,7 @@ function AppContent() {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  const handleLoginSuccess = async () => {
-    console.log('登录成功，开始获取用户信息...');
-    setIsLoggedIn(true);
-    
-    try {
-      // 从服务器获取最新的个人资料
-      console.log('正在获取用户个人资料...');
-      const response = await apiClient.get('/users/profile') as APIResponse<ProfileData & { id: number } >;
-      console.log('获取个人资料响应:', response);
-      
-      if (response.code === 200 && response.data) {
-        console.log('个人资料获取成功:', response.data);
-        setProfileData(response.data);
-        localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('userProfile', JSON.stringify(response.data));
-      } else {
-        throw new Error(response.message || '获取个人资料失败');
-      }
-    } catch (error: unknown) {
-      console.error('获取个人资料失败:', error);
-      // 如果获取失败，使用默认数据
-      const defaultProfile: ProfileData = {
-        username: 'user',
-        email: 'user@example.com',
-        nickname: '新用户',
-        bio: '欢迎来到星の海の物語！',
-        avatar: '',
-        phone: '',
-        location: '',
-        website: ''
-      };
-      setProfileData(defaultProfile);
-      localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('userProfile', JSON.stringify(defaultProfile));
-    }
-  };
+  // 已移除 onLoginSuccess 回调，登录成功后导航到登录页由 LoginPage 处理
 
   const handleLogout = async () => {
     try {
@@ -187,41 +152,7 @@ function AppContent() {
     navigate('/');
   };
 
-  const handleProfileClick = () => {
-    // 1) 优先使用内存中的 profileData
-    if ((profileData as { id?: number })?.id) {
-      navigate(`/profile/${(profileData as { id?: number }).id}`);
-      return;
-    }
-    // 2) 再尝试本地存储
-    const savedProfile = localStorage.getItem('userProfile');
-    if (savedProfile) {
-      try {
-        const p = JSON.parse(savedProfile) as ProfileData & { id?: number };
-        if (p.id) {
-          navigate(`/profile/${p.id}`);
-          return;
-        }
-      } catch {
-        // 忽略：本地 userProfile JSON 解析失败
-      }
-    }
-    // 3) 最后尝试从后端拉取一次
-    (async () => {
-      try {
-        const resp = await apiClient.get('/users/profile') as APIResponse<ProfileData & { id?: number }>;
-        if (resp.code === 200 && resp.data?.id) {
-          localStorage.setItem('userProfile', JSON.stringify(resp.data));
-          navigate(`/profile/${resp.data.id}`);
-          return;
-        }
-      } catch {
-        // 忽略：未登录或获取失败
-      }
-      // 兜底
-      navigate('/profile');
-    })();
-  };
+  // 已移除 onProfileClick，用户菜单直接使用链接跳转
 
   return (
     <>
@@ -229,9 +160,7 @@ function AppContent() {
         {/* 整合后的导航栏 - 包含登录状态显示区域 */}
         <Navigation 
           isLoggedIn={isLoggedIn}
-          onLoginSuccess={handleLoginSuccess}
           onLogout={handleLogout}
-          onProfileClick={handleProfileClick}
           userProfile={isLoggedIn ? profileData : undefined}
         />
         
