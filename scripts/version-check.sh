@@ -53,23 +53,26 @@ get_version_suffix_from_config() {
     echo "$suffix"
 }
 
-# 解析版本号
+# 解析版本号（支持 X.Y.Z 或 X.Y.Z.W...-suffix，始终比较第3段）
 parse_version() {
     local version="$1"
-    local major=$(echo "$version" | cut -d. -f1)
-    local minor=$(echo "$version" | cut -d. -f2)
-    local patch=$(echo "$version" | cut -d. -f3 | cut -d- -f1)
+    # 取去除后缀的纯数字部分
+    local numeric=$(echo "$version" | cut -d- -f1)
+    local major=$(echo "$numeric" | cut -d. -f1)
+    local minor=$(echo "$numeric" | cut -d. -f2)
+    local patch=$(echo "$numeric" | cut -d. -f3)
     local suffix=$(echo "$version" | cut -d- -f2-)
-    
+
     echo "$major $minor $patch $suffix"
 }
 
 # 检查版本号是否有效
 validate_version() {
     local version="$1"
-    if [[ ! "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.-]+)?$ ]]; then
+    # 允许至少三段数字，后可选更多段和/或后缀，例如 1.0.1.2-beta
+    if [[ ! "$version" =~ ^[0-9]+(\.[0-9]+){2,}(-[a-zA-Z0-9.-]+)?$ ]]; then
         log_error "无效的版本号格式: $version"
-        log_error "版本号格式应为: X.Y.Z 或 X.Y.Z-suffix"
+        log_error "版本号格式应为: X.Y.Z 或 X.Y.Z.W... 或附带后缀"
         exit 1
     fi
 }
@@ -115,14 +118,7 @@ main() {
     check_config
     
     # 获取当前版本号
-    local current_version=$(get_version_from_config)
-    local current_suffix=$(get_version_suffix_from_config)
-    
-    # 组合完整版本号
-    local full_version="$current_version"
-    if [ -n "$current_suffix" ]; then
-        full_version="$current_version-$current_suffix"
-    fi
+    local full_version=$(get_version_from_config)
     
     log_info "当前版本号: $full_version"
     

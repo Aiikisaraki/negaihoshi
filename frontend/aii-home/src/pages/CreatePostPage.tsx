@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { postApi } from '../requests/posts';
-import { MarkdownEditor } from '../components/MarkdownEditor';
-import apiClient from '../requests/api';
+import { MarkdownEditor } from '../components/markdown/MarkdownEditor';
+import apiClient, { APIResponse } from '../requests/api';
 
 export function CreatePostPage() {
   const [title, setTitle] = useState('');
@@ -26,14 +26,14 @@ export function CreatePostPage() {
         // 加载现有文章内容
         (async () => {
           try {
-            const resp: any = await apiClient.get(`/posts/view/${idNum}?isPost=true`);
+            const resp = await apiClient.get(`/posts/view/${idNum}?isPost=true`) as APIResponse<Record<string, unknown>>;
             if (resp.code === 200 && resp.data) {
-              const data = resp.data as any;
-              const t = (data.title ?? data.Title ?? '') as string;
+              const data = resp.data as Record<string, unknown>;
+              const t = (data.title as string) ?? (data.Title as string) ?? '';
               setTitle(t);
-              setContent((data.content ?? data.Content ?? '') as string);
+              setContent(((data.content as string) ?? (data.Content as string) ?? ''));
             }
-          } catch (e) {
+          } catch {
             setError('加载文章内容失败');
           }
         })();
@@ -64,7 +64,7 @@ export function CreatePostPage() {
     setIsLoading(true);
     setError('');
     try {
-      let response: any;
+      let response: { code: number; message?: string };
       if (isEdit && editId) {
         response = await postApi.editPost(editId, title.trim(), content.trim(), transferToWP);
       } else {

@@ -1,15 +1,15 @@
 import { useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, /* useNavigate, */ useSearchParams } from 'react-router-dom';
 import { authApi } from '../requests/posts';
 import apiClient, { APIResponse } from '../requests/api';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/feedback/Toast';
 
 export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // 未使用，后续需要时再启用
   const [searchParams] = useSearchParams();
   const toast = useToast();
 
@@ -24,15 +24,17 @@ export default function LoginPage() {
     try {
       const resp = await authApi.login(username.trim(), password);
       if (resp.code === 200) {
-        const loginUserId = (resp.data as any)?.user_id;
-        let mergedProfile: any = {};
+        const loginUserId = (resp.data as { user_id?: number } | undefined)?.user_id;
+        let mergedProfile: Record<string, unknown> = {};
         // 拉取最新资料
         try {
-          const profile = await apiClient.get('/users/profile') as APIResponse<any>;
+          const profile = await apiClient.get('/users/profile') as APIResponse<Record<string, unknown>>;
           if (profile.code === 200 && profile.data) {
             mergedProfile = { ...profile.data };
           }
-        } catch {}
+        } catch {
+          // ignore
+        }
         // 合并ID，确保存在
         if (loginUserId && !mergedProfile.id) {
           mergedProfile.id = loginUserId;
@@ -51,8 +53,9 @@ export default function LoginPage() {
         setError(resp.message || '登录失败');
       }
     } catch (err: unknown) {
-      const msg = (err && typeof err === 'object' && 'message' in err && typeof (err as any).message === 'string')
-        ? (err as any).message
+      const e = err as { message?: string } | undefined;
+      const msg = (e && typeof e === 'object' && typeof e.message === 'string')
+        ? e.message
         : '网络错误，请稍后重试';
       setError(msg);
     } finally {

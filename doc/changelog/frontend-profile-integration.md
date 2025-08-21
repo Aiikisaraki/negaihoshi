@@ -264,10 +264,6 @@ CREATE TABLE users (
 # 重新构建前端项目
 cd frontend/aii-home
 npm run build
-
-# 或者使用提供的脚本
-scripts/rebuild-frontend.bat  # Windows
-scripts/rebuild-frontend.sh   # Linux/macOS
 ```
 
 ### 2. 后端部署

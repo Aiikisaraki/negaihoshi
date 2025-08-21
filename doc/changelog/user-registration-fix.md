@@ -125,9 +125,9 @@ if err != nil {
 ### 4. 数据库迁移
 - `scripts/migrate_users_table.sql` - 数据库表结构更新脚本
 
-### 5. 测试脚本
-- `scripts/test_user_registration.sh` - Linux/macOS测试脚本
-- `scripts/test_user_registration.bat` - Windows测试脚本
+### 5. 测试说明
+已移除历史测试脚本。可通过手工测试以下用例进行验证：
+1. 正常注册；2. 重复用户名；3. 重复邮箱；4. 弱密码；5. 无效邮箱；6. 用户名登录；7. 邮箱登录。
 
 ## 修复后的功能特性
 
@@ -168,15 +168,8 @@ if err != nil {
 6. **用户名登录** - 验证用户名登录
 7. **邮箱登录** - 验证邮箱登录
 
-### 运行测试
-```bash
-# Linux/macOS
-chmod +x scripts/test_user_registration.sh
-./scripts/test_user_registration.sh
-
-# Windows
-scripts/test_user_registration.bat
-```
+### 运行检查
+前端：构建与本地运行后按测试用例逐项验证；后端：查看日志与数据库写入是否符合预期。
 
 ## 部署注意事项
 

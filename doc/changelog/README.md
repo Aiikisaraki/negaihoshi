@@ -4,6 +4,7 @@
 
 ## 变更日志列表
 
+- [前端背景设置悬浮球与页脚集成、登录资料与交互增强](frontend-background-settings-and-footer.md) - 2025-08-21
 - [前后端集成与改进更新（增补：资料/互动/游客树洞/匿名/额度显示）](frontend-backend-integration-and-improvements.md) - 2025-08-20
 - [前后端集成与改进更新](frontend-backend-integration-and-improvements.md) - 2025-08-14
 - [API文档更新](api-documentation.md) - 2025-05-25

@@ -1,0 +1,191 @@
+/* 背景设置菜单样式 */
+
+/* 触发按钮样式 - 设计感十足的按钮 */
+.background-menu-trigger {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6, #ec4899);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.background-menu-trigger::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,0.8) 0%, rgba(255,255,255,0) 70%);
+  opacity: 0;
+  transform: scale(0.5);
+  transition: transform 0.5s ease, opacity 0.5s ease;
+}
+
+.background-menu-trigger:hover::before {
+  opacity: 0.3;
+  transform: scale(1);
+}
+
+/* 悬浮菜单样式 */
+.background-menu {
+  position: absolute;
+  bottom: 60px;
+  right: 0;
+  width: 320px;
+  background: rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.background-menu-content {
+  padding: 20px;
+}
+
+.background-menu h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 输入框样式 */
+.background-input {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(99, 102, 241, 0.3);
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  margin-bottom: 16px;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.background-input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+  transform: translateY(-2px);
+}
+
+/* 按钮组样式 */
+.background-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.background-btn {
+  padding: 10px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  flex: 1;
+}
+
+.background-btn-primary {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  color: white;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+}
+
+.background-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(99, 102, 241, 0.3);
+}
+
+.background-btn-secondary {
+  background: rgba(255, 255, 255, 0.7);
+  color: #4f46e5;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+}
+
+.background-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
+}
+
+/* 预览区域样式 */
+.background-preview {
+  background: rgba(243, 244, 246, 0.7);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.background-preview h4 {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 8px 0;
+  color: #4b5563;
+}
+
+.background-preview img {
+  width: 100%;
+  height: 100px;
+  object-fit: cover;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+.background-preview img:hover {
+  transform: scale(1.02);
+}
+
+.background-preview .no-image {
+  width: 100%;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+  border-radius: 8px;
+  color: #6366f1;
+  font-size: 14px;
+}
+
+/* 错误提示样式 */
+.background-error {
+  background: linear-gradient(135deg, #fee2e2, #fecaca);
+  border: 1px solid #fca5a5;
+  color: #ef4444;
+  padding: 10px 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  text-align: center;
+}
+
+/* 底部说明文字 */
+.background-footer {
+  margin-top: 8px;
+}
+
+.background-footer-text {
+  font-size: 12px;
+  color: #6b7280;
+  text-align: center;
+}

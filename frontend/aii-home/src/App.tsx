@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom';
-import { Navigation } from './components/Navigation';
-import { Timeline } from './components/Timeline';
-import { EditorPanel } from './components/EditorPanel';
+import { Navigation } from './components/ui/Navigation';
+import { Timeline } from './components/feed/Timeline';
+import { EditorPanel } from './components/feed/EditorPanel';
 import { ProfilePage } from './pages/ProfilePage';
 import { CreatePostPage } from './pages/CreatePostPage';
 import { CreateStatusPage } from './pages/CreateStatusPage';
 import { PostDetailPage } from './pages/PostDetailPage';
 import { StatusDetailPage } from './pages/StatusDetailPage';
-import { BackgroundSettings } from './components/BackgroundSettings';
+import { Footer } from './components/ui/Footer';
+import FloatingBackgroundSettings from './components/background/FloatingBackgroundSettings';
 import apiClient, { APIResponse } from './requests/api';
 // import { useToast } from './components/Toast';
 import LoginPage from './pages/LoginPage';
@@ -267,10 +268,8 @@ function AppContent() {
           </div>
         </main>
 
-        {/* 背景设置组件 */}
-        <BackgroundSettings />
-      </div>
-    </>
+       </div>
+      </>
   );
 }
 
@@ -326,94 +325,106 @@ export default function App() {
 
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<AppContent />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route 
-          path="/profile" 
-          element={
-            isLoggedIn ? (
-              <ProfilePage 
+      <div className="min-h-screen flex flex-col bg-gradient-to-br from-blue-100 via-purple-200 via-blue-200 via-cyan-200 to-blue-300">
+        <Routes>
+          <Route path="/" element={<AppContent />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route 
+            path="/profile" 
+            element={
+              isLoggedIn ? (
+                <ProfilePage 
+                  profileData={profileData}
+                  onProfileUpdate={handleProfileUpdate}
+                />
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
+                    <p className="text-blue-600 mb-6">登录后即可查看和编辑个人资料</p>
+                    <button
+                      onClick={() => window.location.href = '/login'}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
+                    >
+                      返回首页
+                    </button>
+                  </div>
+                </div>
+              )
+            } 
+          />
+          <Route
+            path="/profile/:id"
+            element={
+              <ProfilePage
                 profileData={profileData}
                 onProfileUpdate={handleProfileUpdate}
               />
-            ) : (
-              <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50 flex items-center justify-center">
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
-                  <p className="text-blue-600 mb-6">登录后即可查看和编辑个人资料</p>
-                  <button
-                    onClick={() => window.location.href = '/login'}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
-                  >
-                    返回首页
-                  </button>
+            }
+          />
+          <Route 
+            path="/create-post" 
+            element={
+              isLoggedIn ? (
+                <CreatePostPage />
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
+                    <p className="text-blue-600 mb-6">登录后即可创建文章</p>
+                    <button
+                      onClick={() => window.location.href = '/login'}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
+                    >
+                      返回首页
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )
-          } 
-        />
-        <Route
-          path="/profile/:id"
-          element={
-            <ProfilePage
-              profileData={profileData}
-              onProfileUpdate={handleProfileUpdate}
-            />
-          }
-        />
-        <Route 
-          path="/create-post" 
-          element={
-            isLoggedIn ? (
-              <CreatePostPage />
-            ) : (
-              <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50 flex items-center justify-center">
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
-                  <p className="text-blue-600 mb-6">登录后即可创建文章</p>
-                  <button
-                    onClick={() => window.location.href = '/login'}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
-                  >
-                    返回首页
-                  </button>
+              )
+            } 
+          />
+          <Route 
+            path="/create-status" 
+            element={
+              isLoggedIn ? (
+                <CreateStatusPage />
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
+                    <p className="text-blue-600 mb-6">登录后即可发布说说</p>
+                    <button
+                      onClick={() => window.location.href = '/login'}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
+                    >
+                      返回首页
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )
-          } 
+              )
+            } 
+          />
+          <Route 
+            path="/post/:id" 
+            element={<PostDetailPage />} 
+          />
+          <Route 
+            path="/status/:id" 
+            element={<StatusDetailPage />} 
+          />
+        </Routes>
+        
+        {/* 页脚组件 - 在所有路由下都显示 */}
+        <Footer 
+          copyrightYear={new Date().getFullYear()}
+          copyrightName="星の海の物語"
+          recordNumber="粤ICP备XXXXXXXX号"
         />
-        <Route 
-          path="/create-status" 
-          element={
-            isLoggedIn ? (
-              <CreateStatusPage />
-            ) : (
-              <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-cyan-50 flex items-center justify-center">
-                <div className="text-center">
-                  <h1 className="text-2xl font-bold text-blue-800 mb-4">请先登录</h1>
-                  <p className="text-blue-600 mb-6">登录后即可发布说说</p>
-                  <button
-                    onClick={() => window.location.href = '/login'}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-lg text-white transition-all duration-200"
-                  >
-                    返回首页
-                  </button>
-                </div>
-              </div>
-            )
-          } 
-        />
-        <Route 
-          path="/post/:id" 
-          element={<PostDetailPage />} 
-        />
-        <Route 
-          path="/status/:id" 
-          element={<StatusDetailPage />} 
-        />
-      </Routes>
+        
+        {/* 可拖动的背景设置悬浮球 */}
+        <FloatingBackgroundSettings />
+      </div>
     </Router>
   );
 }
@@ -548,19 +559,19 @@ function HomePostsSection({ isLoggedIn }: { isLoggedIn: boolean }) {
       ) : (
         <div className="space-y-4">
           {posts.map(p => (
-            <a key={p.id} href={`/post/${p.id}`} className="block bg-white/80 backdrop-blur-xl rounded-2xl p-5 border border-white/40 hover:shadow-lg transition-shadow">
+            <a key={p.id} href={`/post/${p.id}`} className="block bg-white/40 backdrop-blur-sm rounded-xl p-4 hover:bg-white/50 transition-all duration-200">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-xl font-semibold text-blue-800">{p.title || '无标题'}</h3>
+                <h3 className="text-xl font-semibold text-blue-800/90">{p.title || '无标题'}</h3>
                 <span className="text-sm text-blue-600">{p.ctime ? new Date(p.ctime).toLocaleDateString('zh-CN') : ''}</span>
               </div>
-              <p className="text-blue-700 line-clamp-3 whitespace-pre-wrap">{p.content}</p>
+              <p className="text-blue-700/80 line-clamp-3 whitespace-pre-wrap">{p.content}</p>
               <div className="mt-3 flex justify-between items-center">
                 <button
                   type="button"
                   onClick={(e) => { e.preventDefault(); toggleLike(p.id); }}
                   disabled={!!busy[p.id]}
                   title={liked[p.id] ? '取消点赞' : '点赞'}
-                  className={`flex items-center gap-2 px-3 py-1 rounded-lg border ${liked[p.id] ? 'bg-red-500 text-white border-red-500' : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'} disabled:opacity-50`}
+                  className={`flex items-center gap-2 px-3 py-1 rounded-lg ${liked[p.id] ? 'bg-red-500/80 text-white' : 'bg-white/50 text-blue-700 hover:bg-white/70'} disabled:opacity-50`}
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 ${liked[p.id] ? '' : 'text-red-500'}`}>
                     <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.462 2.25 9a4.5 4.5 0 018.159-2.606.75.75 0 001.282 0A4.5 4.5 0 0119.85 9c0 3.462-2.438 6.36-4.739 8.507a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.218l-.022.012-.007.003-.003.002a.75.75 0 01-.698 0l-.003-.002z" />
@@ -570,13 +581,13 @@ function HomePostsSection({ isLoggedIn }: { isLoggedIn: boolean }) {
                 <button
                   type="button"
                   onClick={(e) => { e.preventDefault(); toggleComments(p.id); }}
-                  className="px-3 py-1 rounded-lg bg-purple-500 text-white hover:bg-purple-600"
+                  className="px-3 py-1 rounded-lg bg-purple-500/70 text-white hover:bg-purple-600/80"
                 >
                   评论
                 </button>
               </div>
               {openComments[p.id] && (
-                <div className="mt-3 border-t border-blue-100 pt-3">
+                <div className="mt-3 pt-3 border-t border-blue-100/30">
                   {!isLoggedIn ? (
                     <div className="text-blue-700">
                       登录后才可以发表评论哦，
@@ -589,7 +600,7 @@ function HomePostsSection({ isLoggedIn }: { isLoggedIn: boolean }) {
                           <div className="text-blue-600">暂无评论</div>
                         ) : (
                           (comments[p.id] || []).map(c => (
-                            <div key={c.id} className="p-3 rounded-xl bg-white border border-blue-100">
+                            <div key={c.id} className="p-3 rounded-xl bg-white/60">
                               <div className="text-sm text-blue-500 mb-1">用户 {c.user_id}</div>
                               <div className="text-blue-800 whitespace-pre-wrap">{c.content}</div>
                             </div>
@@ -604,7 +615,7 @@ function HomePostsSection({ isLoggedIn }: { isLoggedIn: boolean }) {
                           value={commentText[p.id] || ''}
                           onChange={(e) => setCommentText(prev => ({ ...prev, [p.id]: e.target.value }))}
                           placeholder="写下你的评论..."
-                          className="flex-1 p-3 rounded-xl bg-white border border-blue-100 focus:outline-none focus:ring-2 focus:ring-purple-500/30 min-h-[60px]"
+                          className="flex-1 p-3 rounded-xl bg-white/60 focus:outline-none focus:ring-2 focus:ring-purple-500/30 min-h-[60px]"
                         />
                         <button onClick={(e) => { e.preventDefault(); sendComment(p.id); }} disabled={!((commentText[p.id] || '').trim())} className="px-4 h-[42px] self-end rounded-xl bg-gradient-to-r from-blue-500 to-purple-600 text-white disabled:opacity-50">发送</button>
                       </div>
@@ -621,8 +632,8 @@ function HomePostsSection({ isLoggedIn }: { isLoggedIn: boolean }) {
 }
 
 const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="p-6 sm:p-8 rounded-2xl bg-white/20 backdrop-blur-xl border border-white/30 shadow-lg">
-    <h2 className="text-2xl font-semibold text-blue-800 mb-6">{title}</h2>
+  <div className="p-5 sm:p-7 rounded-xl bg-white/10 backdrop-blur-sm shadow-md">
+    <h2 className="text-2xl font-semibold text-blue-800/90 mb-5">{title}</h2>
     {children}
   </div>
 );

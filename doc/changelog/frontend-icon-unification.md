@@ -84,9 +84,11 @@ mkdir "frontend\admin\public"
 - `frontend/aii-home/index.html` - 更新图标引用
 - `frontend/admin/index.html` - 更新图标引用
 
-### 3. 验证脚本
-- `scripts/verify_icons.sh` - Linux/macOS图标验证脚本
-- `scripts/verify_icons.bat` - Windows图标验证脚本
+### 3. 验证说明
+已移除历史验证脚本。请通过以下步骤手工验证：
+1. 检查 `frontend/aii-home/public/favicon.ico` 与 `frontend/admin/public/favicon.ico` 是否存在且与 `server/assets/favicon.ico` 一致；
+2. 打开两个前端，确认浏览器标签页图标正确显示为 favicon.ico；
+3. 在不同浏览器中检查一致性。
 
 ### 4. 文档
 - `doc/changelog/frontend-icon-unification.md` - 图标统一修复记录
@@ -151,15 +153,8 @@ if (!(Test-Path "frontend\admin\public")) {
 - ✅ aii-home图标文件与后端图标文件一致
 - ✅ admin图标文件与后端图标文件一致
 
-### 4. 运行验证脚本
-```bash
-# Linux/macOS
-chmod +x scripts/verify_icons.sh
-./scripts/verify_icons.sh
-
-# Windows
-scripts/verify_icons.bat
-```
+### 4. 验证流程
+构建并启动前端后，手工检查图标显示是否正常。
 
 ## 部署注意事项
 

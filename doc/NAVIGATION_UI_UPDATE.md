@@ -107,7 +107,7 @@ onClick={() => setShowUserMenu(!showUserMenu)}
    - 新增 `react-router-dom` 和 `@types/react-router-dom` 依赖
 
 ### 新增脚本
-1. **`scripts/test-centered-layout.bat`** - 居中布局测试脚本
+（已移除历史测试脚本，建议直接通过浏览器手工验证居中布局与交互行为。）
 
 ## 样式更新详情
 

@@ -1,0 +1,144 @@
+name: Manual Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag_name:
+        description: 'Release tag name (e.g., v1.0.1.2-beta or any custom)'
+        required: false
+        default: ''
+        type: string
+      prerelease:
+        description: 'Mark as pre-release'
+        required: false
+        default: 'false'
+        type: boolean
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/aii-home/package-lock.json
+
+    - name: Cache Go modules
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/go-build
+          ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('server/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+
+    - name: Initialize Go module
+      run: |
+        go mod init negaihoshi || true
+        go mod tidy
+        go mod download
+        go mod verify
+
+    - name: Build backend (Linux)
+      run: |
+        GOOS=linux GOARCH=amd64 go build -o negaihoshi-linux-amd64 server/main.go
+
+    - name: Build backend (Windows)
+      run: |
+        GOOS=windows GOARCH=amd64 go build -o negaihoshi-windows-amd64.exe server/main.go
+
+    - name: Build backend (macOS)
+      run: |
+        GOOS=darwin GOARCH=amd64 go build -o negaihoshi-darwin-amd64 server/main.go
+        GOOS=darwin GOARCH=arm64 go build -o negaihoshi-darwin-arm64 server/main.go
+
+    - name: Build frontend (main)
+      run: |
+        cd frontend/aii-home
+        npm ci
+        npm run build
+
+    - name: Build frontend (admin)
+      run: |
+        cd frontend/admin
+        npm ci
+        npm run build
+
+    - name: Package release
+      run: |
+        mkdir -p release
+        cp negaihoshi-linux-amd64 release/
+        cp negaihoshi-windows-amd64.exe release/
+        cp negaihoshi-darwin-amd64 release/
+        cp negaihoshi-darwin-arm64 release/
+
+        mkdir -p release/linux-amd64 release/windows-amd64 release/darwin-amd64 release/darwin-arm64
+        cp negaihoshi-linux-amd64 release/linux-amd64/negaihoshi
+        cp negaihoshi-windows-amd64.exe release/windows-amd64/negaihoshi.exe
+        cp negaihoshi-darwin-amd64 release/darwin-amd64/negaihoshi
+        cp negaihoshi-darwin-arm64 release/darwin-arm64/negaihoshi
+
+        cp -r frontend/aii-home/dist release/frontend-main
+        cp -r frontend/admin/dist release/frontend-admin
+
+        cp config.json release/
+        cp docker-compose.yml release/
+        cp -r scripts release/
+        cp README.md release/
+
+        echo '#!/bin/bash' > release/linux-amd64/start.sh
+        echo 'chmod +x ./negaihoshi' >> release/linux-amd64/start.sh
+        echo './negaihoshi' >> release/linux-amd64/start.sh
+        chmod +x release/linux-amd64/start.sh
+
+        echo '@echo off' > release/windows-amd64/start.bat
+        echo 'negaihoshi.exe' >> release/windows-amd64/start.bat
+
+        echo '#!/bin/bash' > release/darwin-amd64/start.sh
+        echo 'chmod +x ./negaihoshi' >> release/darwin-amd64/start.sh
+        echo './negaihoshi' >> release/darwin-amd64/start.sh
+        chmod +x release/darwin-amd64/start.sh
+
+        echo '#!/bin/bash' > release/darwin-arm64/start.sh
+        echo 'chmod +x ./negaihoshi' >> release/darwin-arm64/start.sh
+        echo './negaihoshi' >> release/darwin-arm64/start.sh
+        chmod +x release/darwin-arm64/start.sh
+
+        cd release
+        zip -r negaihoshi-manual-${{ github.run_number }}.zip .
+
+    - name: Compute release version
+      id: ver
+      run: |
+        # 优先使用用户输入 tag，否则从 config.json 读取
+        if [ -n "${{ github.event.inputs.tag_name }}" ]; then
+          VERSION="${{ github.event.inputs.tag_name }}"
+        else
+          VERSION=$(grep '"version"' config.json | sed 's/.*"version": *"\([^"]*\)".*/\1/')
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: release/negaihoshi-manual-${{ github.run_number }}.zip
+        tag_name: ${{ steps.ver.outputs.version }}
+        name: Release ${{ steps.ver.outputs.version }}
+        draft: false
+        prerelease: ${{ inputs.prerelease == 'true' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+

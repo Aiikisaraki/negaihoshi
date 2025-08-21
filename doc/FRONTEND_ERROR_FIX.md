@@ -169,9 +169,7 @@ npx tsc --noEmit --skipLibCheck
    - 修复错误处理类型
 
 ### 新增的文件
-1. **`scripts/test-frontend-fix.bat`** - 前端修复测试脚本
-2. **`scripts/verify-frontend-fix.bat`** - 前端修复验证脚本
-3. **`doc/FRONTEND_ERROR_FIX.md`** - 本文档
+1. **`doc/FRONTEND_ERROR_FIX.md`** - 本文档
 
 ## 后续建议
 

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { postApi } from '../requests/posts';
-import { MarkdownEditor } from '../components/MarkdownEditor';
-import apiClient from '../requests/api';
+import { MarkdownEditor } from '../components/markdown/MarkdownEditor';
+import apiClient, { APIResponse } from '../requests/api';
 
 export function CreateStatusPage() {
   const [content, setContent] = useState('');
@@ -24,12 +24,12 @@ export function CreateStatusPage() {
         setEditId(idNum);
         (async () => {
           try {
-            const resp: any = await apiClient.get(`/posts/view/${idNum}?isPost=false`);
+            const resp = await apiClient.get(`/posts/view/${idNum}?isPost=false`) as APIResponse<Record<string, unknown>>;
             if (resp.code === 200 && resp.data) {
-              const data = resp.data as any;
-              setContent((data.content ?? data.Content ?? '') as string);
+              const data = resp.data as Record<string, unknown>;
+              setContent(((data.content as string) ?? (data.Content as string) ?? ''));
             }
-          } catch (e) {
+          } catch {
             setError('加载说说内容失败');
           }
         })();
@@ -52,8 +52,8 @@ export function CreateStatusPage() {
   const countEffectiveChars = (md: string) => {
     const stripped = md
       .replace(/`{1,3}[^`]*`{1,3}/g, '')
-      .replace(/!\[[^\]]*\]\([^\)]*\)/g, '')
-      .replace(/\[[^\]]*\]\([^\)]*\)/g, '')
+      .replace(/!\[[^\]]*\]\([^)]*\)/g, '')
+      .replace(/\[[^\]]*\]\([^)]*\)/g, '')
       .replace(/[*_~#>`-]/g, '')
       .replace(/\s+/g, '');
     return stripped.length;
@@ -73,7 +73,7 @@ export function CreateStatusPage() {
     setIsLoading(true);
     setError('');
     try {
-      let response: any;
+      let response: { code: number; message?: string };
       if (isEdit && editId) {
         response = await postApi.editStatus(editId, content.trim(), transferToWP);
       } else {

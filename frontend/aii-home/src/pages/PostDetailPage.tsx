@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import apiClient from '../requests/api';
-import { MarkdownRenderer } from '../components/MarkdownRenderer';
+import apiClient, { APIResponse } from '../requests/api';
+import { MarkdownRenderer } from '../components/markdown/MarkdownRenderer';
 import { interactApi } from '../requests/interact';
-import AvatarImage from '../components/AvatarImage';
+import AvatarImage from '../components/user/AvatarImage';
 
 interface PostItem {
   id: number;
@@ -29,14 +29,14 @@ export function PostDetailPage() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const navigate = useNavigate();
 
-  const normalizePost = (raw: any): PostItem => {
+  const normalizePost = (raw: Record<string, unknown>): PostItem => {
     return {
-      id: raw.id ?? raw.Id ?? 0,
-      title: raw.title ?? raw.Title ?? '',
-      content: raw.content ?? raw.Content ?? '',
-      userId: raw.userId ?? raw.UserId ?? 0,
-      ctime: raw.ctime ?? raw.Ctime ?? (raw.Ctime ? String(raw.Ctime) : undefined),
-      utime: raw.utime ?? raw.Utime ?? (raw.Utime ? String(raw.Utime) : undefined),
+      id: (raw.id as number) ?? (raw.Id as number) ?? 0,
+      title: (raw.title as string) ?? (raw.Title as string) ?? '',
+      content: (raw.content as string) ?? (raw.Content as string) ?? '',
+      userId: (raw.userId as number) ?? (raw.UserId as number) ?? 0,
+      ctime: (raw.ctime as string) ?? (raw.Ctime as string) ?? (raw.Ctime ? String(raw.Ctime) : undefined),
+      utime: (raw.utime as string) ?? (raw.Utime as string) ?? (raw.Utime ? String(raw.Utime) : undefined),
     };
   };
 
@@ -49,16 +49,16 @@ export function PostDetailPage() {
     if (!id) return;
     try {
       setLoading(true);
-      const response: any = await apiClient.get(`/posts/view/${parseInt(id)}?isPost=true`);
+      const response = await apiClient.get(`/posts/view/${parseInt(id)}?isPost=true`) as APIResponse<PostItem | Record<string, unknown> | Array<Record<string, unknown>>>;
       if (response.code === 200) {
-        const data = Array.isArray(response.data) ? response.data[0] : response.data;
+        const data = Array.isArray(response.data) ? (response.data[0] as Record<string, unknown>) : (response.data as Record<string, unknown>);
         const p = normalizePost(data);
         setPost(p);
         setError('');
         // 拉取作者资料
         if (p.userId) {
           try {
-            const prof: any = await apiClient.get(`/users/profile/${p.userId}`);
+            const prof = await apiClient.get(`/users/profile/${p.userId}`) as APIResponse<{ nickname?: string; username?: string; avatar?: string }>;
             if (prof.code === 200 && prof.data) {
               setAuthor({ id: p.userId, nickname: prof.data.nickname, username: prof.data.username, avatar: prof.data.avatar });
             } else {
@@ -82,14 +82,14 @@ export function PostDetailPage() {
   const loadLikesAndComments = async () => {
     if (!id) return;
     try {
-      const likeResp = await interactApi.likeCount(parseInt(id), true);
+      const likeResp = await interactApi.likeCount(parseInt(id, 10), true);
       if (likeResp.code === 200) setLikeCount(likeResp.data.count || 0);
-      const likedResp = await interactApi.isLiked(parseInt(id), true);
+      const likedResp = await interactApi.isLiked(parseInt(id, 10), true);
       if (likedResp.code === 200) setLiked(!!likedResp.data.liked);
       if (isLoggedIn) {
-        const commentsResp = await interactApi.listComments(parseInt(id), true, 1, 50);
+        const commentsResp = await interactApi.listComments(parseInt(id, 10), true, 1, 50);
         if (commentsResp.code === 200) {
-          const items = (commentsResp.data.comments || []) as any[];
+          const items = (commentsResp.data.comments || []) as Array<{ id: number; content: string; user_id: number; ctime: number }>;
           setComments(items.map(i => ({ id: i.id, content: i.content, user_id: i.user_id, ctime: i.ctime })));
         }
       } else {
@@ -101,11 +101,11 @@ export function PostDetailPage() {
   };
 
   useEffect(() => {
-    loadPost();
+    void loadPost();
   }, [id]);
 
   useEffect(() => {
-    loadLikesAndComments();
+    void loadLikesAndComments();
   }, [id, isLoggedIn]);
 
   // 更新浏览器标题

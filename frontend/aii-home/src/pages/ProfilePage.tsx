@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { userApi, postApi } from '../requests/posts';
+import { userApi } from '../requests/posts';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ProfilePanel } from '../components/ProfilePanel';
+import { useToast } from '../components/feedback/Toast';
+import { ProfilePanel } from '../components/user/ProfilePanel';
 import apiClient from '../requests/api';
-import AvatarImage from '../components/AvatarImage';
+import AvatarImage from '../components/user/AvatarImage';
 import { interactApi } from '../requests/interact';
-import { useToast } from '../components/Toast';
+// import { useToast } from '../components/feedback/Toast';
 
 // 个人资料数据类型
 interface ProfileData {
@@ -59,7 +60,8 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
   const [totalLikesReceived, setTotalLikesReceived] = useState<number>(0);
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<number | undefined>(profileData.id);
-  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
+  const [isLoggedIn] = useState<boolean>(false);
+  const toast = useToast();
 
   const isOwner = !routeUserId || (currentUserId !== undefined && routeUserId === currentUserId);
 
@@ -233,10 +235,10 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const resp: any = await apiClient.get('/posts/listAll?isPost=true');
+      const resp = await apiClient.get('/posts/listAll?isPost=true') as { code: number; data: any };
       if (resp.code === 200) {
         const raw = Array.isArray(resp.data) ? resp.data : (resp.data.posts || []);
-        const normalized = raw.map((p: any) => ({
+        const normalized: PostItem[] = raw.map((p: any) => ({
           id: p.id ?? p.Id,
           title: p.title ?? p.Title ?? '',
           content: p.content ?? p.Content ?? '',
@@ -247,14 +249,14 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
         const userPosts = normalized.filter((post: any) => post.userId === viewProfile.id);
         setPosts(userPosts);
         // 拉取点赞计数与状态（仅在查看他人时有意义，但本地缓存不影响）
-        const ids = userPosts.map(p => p.id);
+        const ids = userPosts.map((p: PostItem) => p.id);
         const [counts, liked] = await Promise.all([
           Promise.all(ids.map(id => interactApi.likeCount(id, true).catch(() => ({ code: 500, data: { count: 0 } } as any)))) ,
           isLoggedIn ? Promise.all(ids.map(id => interactApi.isLiked(id, true).catch(() => ({ code: 401, data: { liked: false } } as any)))) : Promise.resolve(ids.map(() => ({ code: 401, data: { liked: false } } as any)))
         ]);
         const countMap: Record<number, number> = {};
         const likedMap: Record<number, boolean> = {};
-        ids.forEach((id, idx) => {
+        ids.forEach((id: number, idx: number) => {
           countMap[id] = (counts[idx].code === 200 && (counts[idx].data as any)?.count) ? (counts[idx].data as any).count : 0;
           likedMap[id] = (liked[idx].code === 200 && (liked[idx].data as any)?.liked) ? true : false;
         });
@@ -272,10 +274,10 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
   const fetchStatus = async () => {
     setLoading(true);
     try {
-      const resp: any = await apiClient.get('/posts/listAll?isPost=false');
+      const resp = await apiClient.get('/posts/listAll?isPost=false') as { code: number; data: any };
       if (resp.code === 200) {
         const raw = Array.isArray(resp.data) ? resp.data : (resp.data.status || []);
-        const normalized = raw.map((s: any) => ({
+        const normalized: StatusItem[] = raw.map((s: any) => ({
           id: s.id ?? s.Id,
           content: s.content ?? s.Content ?? '',
           userId: s.userId ?? s.UserId,
@@ -285,14 +287,14 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
         const userStatus = normalized.filter((status: any) => status.userId === viewProfile.id);
         setStatusList(userStatus);
         // 拉取点赞计数与状态
-        const ids = userStatus.map(s => s.id);
+        const ids = userStatus.map((s: StatusItem) => s.id);
         const [counts, liked] = await Promise.all([
           Promise.all(ids.map(id => interactApi.likeCount(id, false).catch(() => ({ code: 500, data: { count: 0 } } as any)))),
           isLoggedIn ? Promise.all(ids.map(id => interactApi.isLiked(id, false).catch(() => ({ code: 401, data: { liked: false } } as any)))) : Promise.resolve(ids.map(() => ({ code: 401, data: { liked: false } } as any)))
         ]);
         const countMap: Record<number, number> = {};
         const likedMap: Record<number, boolean> = {};
-        ids.forEach((id, idx) => {
+        ids.forEach((id: number, idx: number) => {
           countMap[id] = (counts[idx].code === 200 && (counts[idx].data as any)?.count) ? (counts[idx].data as any).count : 0;
           likedMap[id] = (liked[idx].code === 200 && (liked[idx].data as any)?.liked) ? true : false;
         });
@@ -637,7 +639,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
                                   </svg>
                                   <span>{postLikeCount[post.id] || 0}</span>
                                 </button>
-                                <button onClick={() => togglePostComments(post.id)} className="px-3 py-1 bg-purple-500 text-white rounded-lg hover:bg-purple-600">评论</button>
+                                <button onClick={() => setPostOpenComments(prev => ({ ...prev, [post.id]: !prev[post.id] }))} className="px-3 py-1 bg-purple-500 text-white rounded-lg hover:bg-purple-600">评论</button>
                               </>
                             )}
                           </div>

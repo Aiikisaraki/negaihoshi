@@ -175,9 +175,11 @@ if (response.code === 200) {
 ### 2. 组件层
 - `frontend/aii-home/src/components/AuthPanel.tsx` - 完善错误处理和UI显示
 
-### 3. 测试脚本
-- `scripts/test_error_handling.sh` - Linux/macOS错误处理测试脚本
-- `scripts/test_error_handling.bat` - Windows错误处理测试脚本
+### 3. 测试说明
+已移除历史测试脚本。可通过以下方式验证：
+1. 运行前端并触发注册失败/成功场景，观察提示信息是否符合预期；
+2. 使用浏览器开发工具检查网络请求状态码与返回体；
+3. 执行 `npm run build` 与 `npx tsc --noEmit --skipLibCheck` 确认构建与类型检查通过。
 
 ## 修复后的功能特性
 
@@ -217,14 +219,14 @@ if (response.code === 200) {
 7. **错误密码** - 验证401错误信息显示
 8. **网络错误** - 验证网络错误提示
 
-### 运行测试
+### 运行检查
 ```bash
-# Linux/macOS
-chmod +x scripts/test_error_handling.sh
-./scripts/test_error_handling.sh
+# 构建
+cd frontend/aii-home
+npm run build
 
-# Windows
-scripts/test_error_handling.bat
+# 类型检查
+npx tsc --noEmit --skipLibCheck
 ```
 
 ## 错误信息示例

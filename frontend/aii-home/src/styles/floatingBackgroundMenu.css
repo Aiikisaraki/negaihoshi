@@ -1,0 +1,216 @@
+/* 悬浮球样式 */
+.floating-background-trigger {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6e8efb, #a777e3);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  font-size: 1.5rem;
+  will-change: transform; /* 优化性能 */
+  touch-action: none; /* 防止触摸设备上的默认行为 */
+}
+
+.floating-background-trigger:active {
+  cursor: grabbing;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transform: scale(0.95);
+}
+
+/* 靠近边缘时的样式 */
+.floating-background-trigger.near-edge {
+  opacity: 0.15; /* 更低的透明度 */
+  transform: scale(0.6); /* 更小的缩放 */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: opacity 0.15s ease, transform 0.15s ease; /* 更快的过渡效果 */
+}
+
+/* 悬浮菜单样式 */
+.floating-background-menu {
+  position: fixed;
+  width: 320px;
+  background: rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  z-index: 1001;
+  overflow: hidden;
+  padding: 0;
+  color: #333;
+}
+
+.background-menu-content {
+  padding: 20px;
+}
+
+.floating-background-menu h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #444;
+  text-align: center;
+}
+
+.floating-background-menu h4 {
+  margin: 15px 0 10px 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #555;
+}
+
+/* 输入框样式 */
+.background-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  margin-bottom: 15px;
+  transition: border-color 0.3s;
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.background-input:focus {
+  outline: none;
+  border-color: #6e8efb;
+  box-shadow: 0 0 0 2px rgba(110, 142, 251, 0.2);
+}
+
+/* 按钮组样式 */
+.background-buttons {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.background-btn {
+  flex: 1;
+  padding: 8px 0;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.background-btn-primary {
+  background: linear-gradient(135deg, #6e8efb, #a777e3);
+  color: white;
+}
+
+.background-btn-primary:hover {
+  background: linear-gradient(135deg, #5d7df9, #9666e0);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.background-btn-secondary {
+  background: rgba(239, 239, 239, 0.8);
+  color: #555;
+}
+
+.background-btn-secondary:hover {
+  background: rgba(220, 220, 220, 0.9);
+  transform: translateY(-1px);
+}
+
+.background-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 错误提示样式 */
+.background-error {
+  background: rgba(255, 0, 0, 0.1);
+  color: #e53935;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  margin-bottom: 15px;
+  border-left: 3px solid #e53935;
+}
+
+/* 预览区域样式 */
+.background-preview {
+  margin-bottom: 15px;
+}
+
+.background-preview img {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.background-preview .no-image {
+  width: 100%;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa, #c3cfe2);
+  border-radius: 8px;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* 底部说明样式 */
+.background-footer {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.background-footer-text {
+  font-size: 0.75rem;
+  color: #888;
+  margin: 0;
+}
+
+/* 加载动画样式 */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+.flex {
+  display: flex;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.space-x-2 > * + * {
+  margin-left: 0.5rem;
+}
+
+/* 响应式调整 */
+@media (max-width: 480px) {
+  .floating-background-menu {
+    width: 280px;
+  }
+  
+  .background-preview img,
+  .background-preview .no-image {
+    height: 100px;
+  }
+}

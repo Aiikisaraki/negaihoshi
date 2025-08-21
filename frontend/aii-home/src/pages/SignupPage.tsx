@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../requests/posts';
-import { useToast } from '../components/Toast';
+import { useToast } from '../components/feedback/Toast';
 
 export default function SignupPage() {
   const [username, setUsername] = useState('');
