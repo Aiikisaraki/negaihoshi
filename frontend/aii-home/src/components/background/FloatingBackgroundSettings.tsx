@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useDragControls } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import '../../styles/floatingBackgroundMenu.css';
 
 const FloatingBackgroundSettings: React.FC = () => {
@@ -11,7 +11,7 @@ const FloatingBackgroundSettings: React.FC = () => {
   const [error, setError] = useState('');
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
-  const dragControls = useDragControls();
+  
 
   // 从localStorage加载保存的背景图和位置
   useEffect(() => {
@@ -173,7 +173,7 @@ const FloatingBackgroundSettings: React.FC = () => {
         dragMomentum={false}
         dragElastic={0}
         onDragStart={() => setIsMenuVisible(false)}
-        onDrag={(event, info) => {
+        onDrag={(_event, info) => {
           // 实时检查是否靠近边缘
           const currentPos = { 
             x: position.x + info.offset.x, 
@@ -181,7 +181,7 @@ const FloatingBackgroundSettings: React.FC = () => {
           };
           setIsNearEdge(checkIfNearEdge(currentPos));
         }}
-        onDragEnd={(e, info) => {
+        onDragEnd={(_e, info) => {
           // 更新位置并保存
           const newPosition = { 
             x: position.x + info.offset.x, 

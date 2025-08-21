@@ -14,9 +14,7 @@ import { useToast } from '../feedback/Toast';
 
 interface NavigationProps {
   isLoggedIn: boolean;
-  onLoginSuccess: () => void;
   onLogout: () => void;
-  onProfileClick: () => void;
   userProfile?: {
     id?: number;
     avatar?: string;
@@ -25,12 +23,12 @@ interface NavigationProps {
   };
 }
 
-export function Navigation({ isLoggedIn, onLoginSuccess, onLogout, onProfileClick, userProfile }: NavigationProps) {
+export function Navigation({ isLoggedIn, onLogout, userProfile }: NavigationProps) {
   
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(userProfile?.avatar);
   // 弹窗登录已废弃，统一跳转 /login
-  const toast = useToast();
+  const _toast = useToast();
 
   // 登录后或导航挂载时尝试获取最新头像
   useEffect(() => {
