@@ -16,4 +16,5 @@ export const interactApi = {
   unfollow: (followeeId: number) => apiClient.delete('/interact/follow', { data: { followee_id: followeeId } }),
   countFollowers: (userId: number) => apiClient.get(`/interact/followers/count?user_id=${userId}`) as Promise<{ code: number; message: string; data: { count: number } }>,
   countFollowing: (userId: number) => apiClient.get(`/interact/following/count?user_id=${userId}`) as Promise<{ code: number; message: string; data: { count: number } }>,
+  isFollowing: (followeeId: number) => apiClient.get(`/interact/is-following?followee_id=${followeeId}`) as Promise<{ code: number; message: string; data: { following: boolean } }>,
 };

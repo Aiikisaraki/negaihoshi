@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { userApi } from '../requests/posts';
+import { userApi } from '../requests/posts';
 import { Link, useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useToast } from '../components/feedback/Toast';
 import { ProfilePanel } from '../components/user/ProfilePanel';
@@ -250,12 +251,14 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
         setPosts(userPosts);
         // 拉取点赞计数与状态（仅在查看他人时有意义，但本地缓存不影响）
         const ids = userPosts.map((p: PostItem) => p.id);
+        const ids = userPosts.map((p: PostItem) => p.id);
         const [counts, liked] = await Promise.all([
           Promise.all(ids.map(id => interactApi.likeCount(id, true).catch(() => ({ code: 500, data: { count: 0 } } as any)))) ,
           isLoggedIn ? Promise.all(ids.map(id => interactApi.isLiked(id, true).catch(() => ({ code: 401, data: { liked: false } } as any)))) : Promise.resolve(ids.map(() => ({ code: 401, data: { liked: false } } as any)))
         ]);
         const countMap: Record<number, number> = {};
         const likedMap: Record<number, boolean> = {};
+        ids.forEach((id: number, idx: number) => {
         ids.forEach((id: number, idx: number) => {
           countMap[id] = (counts[idx].code === 200 && (counts[idx].data as any)?.count) ? (counts[idx].data as any).count : 0;
           likedMap[id] = (liked[idx].code === 200 && (liked[idx].data as any)?.liked) ? true : false;
@@ -288,12 +291,14 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
         setStatusList(userStatus);
         // 拉取点赞计数与状态
         const ids = userStatus.map((s: StatusItem) => s.id);
+        const ids = userStatus.map((s: StatusItem) => s.id);
         const [counts, liked] = await Promise.all([
           Promise.all(ids.map(id => interactApi.likeCount(id, false).catch(() => ({ code: 500, data: { count: 0 } } as any)))),
           isLoggedIn ? Promise.all(ids.map(id => interactApi.isLiked(id, false).catch(() => ({ code: 401, data: { liked: false } } as any)))) : Promise.resolve(ids.map(() => ({ code: 401, data: { liked: false } } as any)))
         ]);
         const countMap: Record<number, number> = {};
         const likedMap: Record<number, boolean> = {};
+        ids.forEach((id: number, idx: number) => {
         ids.forEach((id: number, idx: number) => {
           countMap[id] = (counts[idx].code === 200 && (counts[idx].data as any)?.count) ? (counts[idx].data as any).count : 0;
           likedMap[id] = (liked[idx].code === 200 && (liked[idx].data as any)?.liked) ? true : false;
