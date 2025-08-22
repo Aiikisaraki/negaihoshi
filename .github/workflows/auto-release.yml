@@ -127,14 +127,14 @@ jobs:
       if: steps.build_check.outputs.build_needed == 'true'
       run: |
         cd frontend/aii-home
-        npm ci
+        npm install
         npm run build
         
     - name: Build frontend (admin)
       if: steps.build_check.outputs.build_needed == 'true'
       run: |
         cd frontend/admin
-        npm ci
+        npm install
         npm run build
         
     - name: Create platform-specific packages
