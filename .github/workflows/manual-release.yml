@@ -76,48 +76,97 @@ jobs:
         npm ci
         npm run build
 
-    - name: Package release
+    - name: Create platform-specific packages
       run: |
+        # 创建基础目录
         mkdir -p release
-        cp negaihoshi-linux-amd64 release/
-        cp negaihoshi-windows-amd64.exe release/
-        cp negaihoshi-darwin-amd64 release/
-        cp negaihoshi-darwin-arm64 release/
-
-        mkdir -p release/linux-amd64 release/windows-amd64 release/darwin-amd64 release/darwin-arm64
-        cp negaihoshi-linux-amd64 release/linux-amd64/negaihoshi
-        cp negaihoshi-windows-amd64.exe release/windows-amd64/negaihoshi.exe
-        cp negaihoshi-darwin-amd64 release/darwin-amd64/negaihoshi
-        cp negaihoshi-darwin-arm64 release/darwin-arm64/negaihoshi
-
+        
+        # 复制前端构建文件
         cp -r frontend/aii-home/dist release/frontend-main
         cp -r frontend/admin/dist release/frontend-admin
-
+        
+        # 复制配置文件和其他文件
         cp config.json release/
         cp docker-compose.yml release/
         cp -r scripts release/
         cp README.md release/
-
+        
+        # 创建Linux AMD64包
+        mkdir -p release/linux-amd64
+        cp negaihoshi-linux-amd64 release/linux-amd64/negaihoshi
+        cp -r release/frontend-main release/linux-amd64/
+        cp -r release/frontend-admin release/linux-amd64/
+        cp release/config.json release/linux-amd64/
+        cp release/docker-compose.yml release/linux-amd64/
+        cp -r release/scripts release/linux-amd64/
+        cp release/README.md release/linux-amd64/
+        
+        # 创建Linux启动脚本
         echo '#!/bin/bash' > release/linux-amd64/start.sh
         echo 'chmod +x ./negaihoshi' >> release/linux-amd64/start.sh
         echo './negaihoshi' >> release/linux-amd64/start.sh
         chmod +x release/linux-amd64/start.sh
-
+        
+        # 创建Windows AMD64包
+        mkdir -p release/windows-amd64
+        cp negaihoshi-windows-amd64.exe release/windows-amd64/negaihoshi.exe
+        cp -r release/frontend-main release/windows-amd64/
+        cp -r release/frontend-admin release/windows-amd64/
+        cp release/config.json release/windows-amd64/
+        cp release/docker-compose.yml release/windows-amd64/
+        cp -r release/scripts release/windows-amd64/
+        cp release/README.md release/windows-amd64/
+        
+        # 创建Windows启动脚本
         echo '@echo off' > release/windows-amd64/start.bat
         echo 'negaihoshi.exe' >> release/windows-amd64/start.bat
-
+        
+        # 创建macOS AMD64包
+        mkdir -p release/darwin-amd64
+        cp negaihoshi-darwin-amd64 release/darwin-amd64/negaihoshi
+        cp -r release/frontend-main release/darwin-amd64/
+        cp -r release/frontend-admin release/darwin-amd64/
+        cp release/config.json release/darwin-amd64/
+        cp release/docker-compose.yml release/darwin-amd64/
+        cp -r release/scripts release/darwin-amd64/
+        cp release/README.md release/darwin-amd64/
+        
+        # 创建macOS AMD64启动脚本
         echo '#!/bin/bash' > release/darwin-amd64/start.sh
         echo 'chmod +x ./negaihoshi' >> release/darwin-amd64/start.sh
         echo './negaihoshi' >> release/darwin-amd64/start.sh
         chmod +x release/darwin-amd64/start.sh
-
+        
+        # 创建macOS ARM64包
+        mkdir -p release/darwin-arm64
+        cp negaihoshi-darwin-arm64 release/darwin-arm64/negaihoshi
+        cp -r release/frontend-main release/darwin-arm64/
+        cp -r release/frontend-admin release/darwin-arm64/
+        cp release/config.json release/darwin-arm64/
+        cp release/docker-compose.yml release/darwin-arm64/
+        cp -r release/scripts release/darwin-arm64/
+        cp release/README.md release/darwin-arm64/
+        
+        # 创建macOS ARM64启动脚本
         echo '#!/bin/bash' > release/darwin-arm64/start.sh
         echo 'chmod +x ./negaihoshi' >> release/darwin-arm64/start.sh
         echo './negaihoshi' >> release/darwin-arm64/start.sh
         chmod +x release/darwin-arm64/start.sh
-
-        cd release
-        zip -r negaihoshi-manual-${{ github.run_number }}.zip .
+        
+        # 创建各平台的zip文件
+        cd release/linux-amd64
+        zip -r ../../negaihoshi-manual-${{ github.run_number }}-linux-amd64.zip .
+        
+        cd ../windows-amd64
+        zip -r ../../negaihoshi-manual-${{ github.run_number }}-windows-amd64.zip .
+        
+        cd ../darwin-amd64
+        zip -r ../../negaihoshi-manual-${{ github.run_number }}-darwin-amd64.zip .
+        
+        cd ../darwin-arm64
+        zip -r ../../negaihoshi-manual-${{ github.run_number }}-darwin-arm64.zip .
+        
+        cd ../..
 
     - name: Compute release version
       id: ver
@@ -133,9 +182,66 @@ jobs:
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
-        files: release/negaihoshi-manual-${{ github.run_number }}.zip
+        files: |
+          negaihoshi-manual-${{ github.run_number }}-linux-amd64.zip
+          negaihoshi-manual-${{ github.run_number }}-windows-amd64.zip
+          negaihoshi-manual-${{ github.run_number }}-darwin-amd64.zip
+          negaihoshi-manual-${{ github.run_number }}-darwin-arm64.zip
         tag_name: ${{ steps.ver.outputs.version }}
         name: Release ${{ steps.ver.outputs.version }}
+        body: |
+          ## Negaihoshi Manual Release ${{ steps.ver.outputs.version }}
+          
+          ### What's New
+          - Platform-specific release packages
+          - Manual release build
+          - Frontend builds included
+          
+          ### Version Information
+          - **Version**: ${{ steps.ver.outputs.version }}
+          - **Build Number**: ${{ github.run_number }}
+          - **Build Date**: ${{ github.event.head_commit.timestamp }}
+          - **Commit**: ${{ github.sha }}
+          
+          ### Platform-Specific Downloads
+          
+          #### Linux (AMD64)
+          - **File**: `negaihoshi-manual-${{ github.run_number }}-linux-amd64.zip`
+          - **Architecture**: x86_64
+          - **Startup**: Run `./start.sh` after extraction
+          
+          #### Windows (AMD64)
+          - **File**: `negaihoshi-manual-${{ github.run_number }}-windows-amd64.zip`
+          - **Architecture**: x86_64
+          - **Startup**: Run `start.bat` after extraction
+          
+          #### macOS (AMD64)
+          - **File**: `negaihoshi-manual-${{ github.run_number }}-darwin-amd64.zip`
+          - **Architecture**: x86_64
+          - **Startup**: Run `./start.sh` after extraction
+          
+          #### macOS (ARM64)
+          - **File**: `negaihoshi-manual-${{ github.run_number }}-darwin-arm64.zip`
+          - **Architecture**: ARM64 (Apple Silicon)
+          - **Startup**: Run `./start.sh` after extraction
+          
+          ### Installation Instructions
+          1. Download the appropriate package for your platform
+          2. Extract the zip file
+          3. Run the startup script for your platform:
+             - **Linux/macOS**: `./start.sh`
+             - **Windows**: `start.bat`
+          
+          ### Files Included in Each Package
+          - Platform-specific backend binary
+          - Platform-specific startup script
+          - `frontend-main/` - Main frontend build
+          - `frontend-admin/` - Admin frontend build
+          - `config.json` - Configuration file
+          - `docker-compose.yml` - Docker configuration
+          - `scripts/` - Startup scripts
+          - `README.md` - Documentation
+          
         draft: false
         prerelease: ${{ inputs.prerelease == 'true' }}
       env:

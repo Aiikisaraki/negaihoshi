@@ -440,36 +440,80 @@ go run cmd/config-generator/main.go -force
 
 ### Release包使用
 
-下载Release包后：
+下载对应平台的Release包后：
 
-1. **解压文件**: 解压 `negaihoshi-*.zip` 到目标目录
-2. **启动服务**: 使用Release专用启动脚本
+1. **选择平台**: 下载对应你操作系统的Release包
+   - **Linux**: `negaihoshi-*-linux-amd64.zip`
+   - **Windows**: `negaihoshi-*-windows-amd64.zip`
+   - **macOS Intel**: `negaihoshi-*-darwin-amd64.zip`
+   - **macOS Apple Silicon**: `negaihoshi-*-darwin-arm64.zip`
+
+2. **解压文件**: 解压对应的zip文件到目标目录
+
+3. **启动服务**: 使用平台特定的启动脚本
    ```bash
    # Linux/macOS
-   chmod +x scripts/start-release.sh
-   ./scripts/start-release.sh
+   chmod +x start.sh
+   ./start.sh
    
    # Windows
-   scripts\start-release.bat
+   start.bat
    ```
 
 ### 构建产物
 
-Release包包含以下文件：
+Release包按平台分别打包，每个平台包包含以下文件：
 
+#### Linux (AMD64) - `negaihoshi-*-linux-amd64.zip`
 ```
-negaihoshi-*/                    # Release根目录
-├── negaihoshi                   # 后端可执行文件 (Linux/macOS)
-├── negaihoshi.exe              # 后端可执行文件 (Windows)
-├── frontend-main/              # 主前端构建文件
-├── frontend-admin/             # 管理员前端构建文件
-├── config.json                 # 全局配置文件
-├── docker-compose.yml          # Docker配置
-├── scripts/                    # 启动脚本
-│   ├── start-release.sh       # Linux/macOS启动脚本
-│   ├── start-release.bat      # Windows启动脚本
-│   └── ...                    # 其他脚本
-└── README.md                   # 项目文档
+negaihoshi-*-linux-amd64/
+├── negaihoshi                 # 后端可执行文件
+├── start.sh                   # Linux启动脚本
+├── frontend-main/             # 主前端构建文件
+├── frontend-admin/            # 管理员前端构建文件
+├── config.json                # 全局配置文件
+├── docker-compose.yml         # Docker配置
+├── scripts/                   # 启动脚本
+└── README.md                  # 项目文档
+```
+
+#### Windows (AMD64) - `negaihoshi-*-windows-amd64.zip`
+```
+negaihoshi-*-windows-amd64/
+├── negaihoshi.exe            # 后端可执行文件
+├── start.bat                 # Windows启动脚本
+├── frontend-main/            # 主前端构建文件
+├── frontend-admin/           # 管理员前端构建文件
+├── config.json               # 全局配置文件
+├── docker-compose.yml        # Docker配置
+├── scripts/                  # 启动脚本
+└── README.md                 # 项目文档
+```
+
+#### macOS (AMD64) - `negaihoshi-*-darwin-amd64.zip`
+```
+negaihoshi-*-darwin-amd64/
+├── negaihoshi                # 后端可执行文件
+├── start.sh                  # macOS启动脚本
+├── frontend-main/            # 主前端构建文件
+├── frontend-admin/           # 管理员前端构建文件
+├── config.json               # 全局配置文件
+├── docker-compose.yml        # Docker配置
+├── scripts/                  # 启动脚本
+└── README.md                 # 项目文档
+```
+
+#### macOS (ARM64) - `negaihoshi-*-darwin-arm64.zip`
+```
+negaihoshi-*-darwin-arm64/
+├── negaihoshi                # 后端可执行文件 (Apple Silicon)
+├── start.sh                  # macOS启动脚本
+├── frontend-main/            # 主前端构建文件
+├── frontend-admin/           # 管理员前端构建文件
+├── config.json               # 全局配置文件
+├── docker-compose.yml        # Docker配置
+├── scripts/                  # 启动脚本
+└── README.md                 # 项目文档
 ```
 
 ### 版本管理
