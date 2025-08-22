@@ -16,6 +16,14 @@ import (
 	"reflect"
 )
 
+// getEnvOrDefault 获取环境变量，如果不存在则返回默认值
+func getEnvOrDefault(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
+
 func IsZero(i interface{}) bool {
 	return reflect.ValueOf(i).IsZero()
 }
@@ -119,7 +127,16 @@ func (c *ConfigFunction) GetDatabaseConfig() (string, string, string, string, st
 		fmt.Println("config 未被赋值")
 		return "", "", "", "", "", ""
 	}
-	return c.Config.Database.Type, c.Config.Database.Host, c.Config.Database.Port, c.Config.Database.User, c.Config.Database.Password, c.Config.Database.DatabaseName
+
+	// 优先使用环境变量，如果环境变量不存在则使用配置文件
+	dbType := c.Config.Database.Type
+	dbHost := getEnvOrDefault("DB_HOST", c.Config.Database.Host)
+	dbPort := getEnvOrDefault("DB_PORT", c.Config.Database.Port)
+	dbUser := getEnvOrDefault("DB_USER", c.Config.Database.User)
+	dbPassword := getEnvOrDefault("DB_PASSWORD", c.Config.Database.Password)
+	dbDatabaseName := getEnvOrDefault("DB_NAME", c.Config.Database.DatabaseName)
+
+	return dbType, dbHost, dbPort, dbUser, dbPassword, dbDatabaseName
 }
 
 func (c *ConfigFunction) GetRedisConfig() (string, string, string) {
@@ -127,7 +144,13 @@ func (c *ConfigFunction) GetRedisConfig() (string, string, string) {
 		fmt.Println("config 未被赋值")
 		return "", "", ""
 	}
-	return c.Config.Redis.Host, c.Config.Redis.Port, c.Config.Redis.Password
+
+	// 优先使用环境变量，如果环境变量不存在则使用配置文件
+	redisHost := getEnvOrDefault("REDIS_HOST", c.Config.Redis.Host)
+	redisPort := getEnvOrDefault("REDIS_PORT", c.Config.Redis.Port)
+	redisPassword := getEnvOrDefault("REDIS_PASSWORD", c.Config.Redis.Password)
+
+	return redisHost, redisPort, redisPassword
 }
 
 func (c *ConfigFunction) GetServerPort() string {

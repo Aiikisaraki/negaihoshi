@@ -186,6 +186,71 @@ go run cmd/config-generator/main.go -help
 }
 ```
 
+## 🚀 部署
+
+### Docker部署（推荐）
+
+项目支持完整的Docker部署，包含MySQL和Redis数据库：
+
+#### 快速启动
+```bash
+# Linux/macOS
+./scripts/docker-start.sh
+
+# Windows
+scripts\docker-start.bat
+```
+
+#### 手动启动
+```bash
+# 完整模式（推荐）
+docker-compose up -d
+
+# 简化模式（仅后端+数据库）
+docker-compose -f docker-compose.simple.yml up -d
+
+# 仅数据库
+docker-compose -f docker-compose.simple.yml up -d mysql redis
+```
+
+#### 访问地址
+- **主前端**: http://localhost:3000
+- **管理前端**: http://localhost:3001
+- **后端API**: http://localhost:9292
+- **API文档**: http://localhost:9292/api/docs
+
+详细部署说明请查看 [Docker部署指南](./DOCKER_DEPLOYMENT.md)。
+
+### 传统部署
+
+#### 生产环境构建
+
+```bash
+# 构建生产版本
+npm run build:prod
+
+# 构建文件位于 dist/ 目录
+```
+
+#### 手动生成配置文件
+
+```bash
+# 进入后端目录
+cd server
+
+# 生成默认配置文件
+go run cmd/config-generator/main.go
+
+# 指定配置文件路径
+go run cmd/config-generator/main.go -global ../config.json -backend config/config.json
+
+# 强制重新生成
+go run cmd/config-generator/main.go -force
+
+# 查看帮助
+go run cmd/config-generator/main.go -help
+```
+
 ## 🌐 访问地址
 
 启动成功后，可以通过以下地址访问：

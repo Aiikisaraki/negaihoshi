@@ -6,8 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:prod": "VITE_DEV_MODE=false VITE_DEBUG_MODE=false tsc -b && vite build",
+    "build:dev": "VITE_DEV_MODE=true VITE_DEBUG_MODE=true tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "setup-env": "cp env.example .env",
+    "setup-env:win": "scripts\\setup-env.bat",
+    "setup-env:unix": "bash scripts/setup-env.sh"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

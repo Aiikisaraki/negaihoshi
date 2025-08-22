@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { apiConfig } from '../../config/api';
 
 interface AvatarImageProps {
   src: string;
@@ -14,13 +15,16 @@ export default function AvatarImage({
   src,
   alt = '头像',
   className,
-  baseUrl = 'http://localhost:9292',
+  baseUrl,
   fallbackNode,
 }: AvatarImageProps) {
+  // 使用环境变量配置的API基础URL，移除/api后缀用于静态资源
+  const defaultBaseUrl = apiConfig.baseURL.replace('/api', '');
+  const finalBaseUrl = baseUrl || defaultBaseUrl;
   const resolvedSrc = useMemo(() => {
     if (!src || src.trim() === '') return '';
-    return src.startsWith('http') ? src : `${baseUrl}${src}`;
-  }, [src, baseUrl]);
+    return src.startsWith('http') ? src : `${finalBaseUrl}${src}`;
+  }, [src, finalBaseUrl]);
 
   const [imgSrc, setImgSrc] = useState<string>(resolvedSrc);
 

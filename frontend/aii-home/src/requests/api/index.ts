@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { apiConfig } from '../../config/api';
 
 // 定义API响应的通用类型
 export interface APIResponse<T = unknown> {
@@ -9,8 +10,8 @@ export interface APIResponse<T = unknown> {
 
 // 创建 axios 实例
 const apiClient = axios.create({
-  baseURL: 'http://localhost:9292/api', // 基础 URL
-  timeout: 30000,   // 增加超时时间到30秒，特别是文件上传
+  baseURL: apiConfig.baseURL, // 从环境变量获取基础 URL
+  timeout: apiConfig.timeout,   // 从环境变量获取超时时间
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,7 +22,9 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     // 可以在这里添加认证信息等
-    console.log('发送请求:', config.method?.toUpperCase(), config.url, config.data);
+    if (apiConfig.debugMode) {
+      console.log('发送请求:', config.method?.toUpperCase(), config.url, config.data);
+    }
     return config;
   },
   (error) => {
@@ -34,7 +37,9 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => {
     const { status, data, config } = response;
-    console.log('收到响应:', status, config.url, data);
+    if (apiConfig.debugMode) {
+      console.log('收到响应:', status, config.url, data);
+    }
 
     // 标准化无内容/空响应（例如 204 或后端未返回包裹结构）
     if (status === 204 || data === '' || data === undefined || data === null) {

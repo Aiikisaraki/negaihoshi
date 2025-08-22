@@ -10,6 +10,7 @@ import { PostDetailPage } from './pages/PostDetailPage';
 import { StatusDetailPage } from './pages/StatusDetailPage';
 import { Footer } from './components/ui/Footer';
 import FloatingBackgroundSettings from './components/background/FloatingBackgroundSettings';
+import ConfigDisplay from './components/ui/ConfigDisplay';
 import apiClient, { APIResponse } from './requests/api';
 // import { useToast } from './components/Toast';
 import LoginPage from './pages/LoginPage';
@@ -353,6 +354,9 @@ export default function App() {
         
         {/* 可拖动的背景设置悬浮球 */}
         <FloatingBackgroundSettings />
+        
+        {/* 开发模式下的配置显示组件 */}
+        <ConfigDisplay />
       </div>
     </Router>
   );

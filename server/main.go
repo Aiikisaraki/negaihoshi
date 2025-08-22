@@ -52,6 +52,16 @@ func main() {
 
 	r.Static("/assets", "./assets")
 	r.StaticFile("/favicon.ico", "./assets/favicon.ico")
+
+	// 健康检查端点
+	r.GET("/api/health", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"status":    "ok",
+			"message":   "Service is healthy",
+			"timestamp": time.Now().Unix(),
+		})
+	})
+
 	// 注意：uploads静态文件服务已经在initWebServer中配置，这里不需要重复配置
 	serverPort := serverConfig.GetServerPort()
 	r.Run(":" + serverPort)
