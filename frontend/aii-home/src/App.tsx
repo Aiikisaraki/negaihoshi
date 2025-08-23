@@ -15,6 +15,7 @@ import apiClient, { APIResponse } from './requests/api';
 // import { useToast } from './components/Toast';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import ConfigManager from './components/ui/ConfigManager';
 
 // 个人资料数据类型
 interface ProfileData {
@@ -357,6 +358,9 @@ export default function App() {
         
         {/* 开发模式下的配置显示组件 */}
         <ConfigDisplay />
+
+        {/* 配置管理组件 */}
+        <ConfigManager />
       </div>
     </Router>
   );
