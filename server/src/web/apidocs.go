@@ -602,6 +602,17 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
 		return
 	}
 
+	// 获取当前请求的协议和主机
+	protocol := "http"
+	if ctx.Request.TLS != nil {
+		protocol = "https"
+	}
+	host := ctx.Request.Host
+	if host == "" {
+		host = "localhost:9292" // 默认值
+	}
+	apiBaseURL := protocol + "://" + host
+
 	html := `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -696,17 +707,34 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
             max-height: 300px;
             overflow-y: auto;
         }
+        .api-base-url {
+            background: rgba(74, 144, 226, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1.1rem;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>API测试工具</h1>
+        
+        <div class="api-base-url">
+            <strong>API基础URL:</strong> ` + apiBaseURL + `
+        </div>
+        
         <div id="api-list">
             <p>正在加载API列表...</p>
         </div>
     </div>
 
     <script>
+        // 设置API基础URL
+        const API_BASE_URL = '` + apiBaseURL + `';
+        
         // 加载API列表
         fetch('/api/docs/json')
             .then(response => response.json())
@@ -740,7 +768,7 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
                     '<div class="test-form">' +
                     '<div class="form-group">' +
                     '<label>请求URL:</label>' +
-                    '<input type="text" value="http://localhost:9292' + path + '" readonly>' +
+                    '<input type="text" value="' + API_BASE_URL + path + '" readonly>' +
                     '</div>';
                 
                 if (hasRequestBody) {
@@ -763,7 +791,7 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
             const responseDiv = section.querySelector('.response');
             const textarea = section.querySelector('textarea');
             
-            let url = 'http://localhost:9292' + path;
+            let url = API_BASE_URL + path;
             let options = {
                 method: method,
                 headers: {

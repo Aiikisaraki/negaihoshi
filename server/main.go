@@ -85,18 +85,35 @@ func initConfig() (config.ConfigFunction, error) {
 func initWebServer(config *config.ConfigFunction) *gin.Engine {
 	r := gin.Default()
 	frontendPrefix := config.GetFrontendPrefix()
+	
+	// 修复CORS配置，支持多个前端域名
 	r.Use(cors.New(cors.Config{
-		AllowHeaders:     []string{"Content-Type", "Authorization", "X-Requested-With", "Accept"},
+		AllowHeaders:     []string{"Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowCredentials: true,
 		AllowOriginFunc: func(origin string) bool {
+			// 允许本地开发环境
 			if strings.Contains(origin, "localhost") || strings.Contains(origin, "127.0.0.1") {
 				return true
 			}
-			return strings.HasPrefix(origin, frontendPrefix[0])
+			
+			// 检查是否在允许的前端域名列表中
+			for _, allowedOrigin := range frontendPrefix {
+				if strings.HasPrefix(origin, allowedOrigin) {
+					return true
+				}
+			}
+			
+			// 允许没有Origin头的请求（如移动端应用）
+			if origin == "" {
+				return true
+			}
+			
+			return false
 		},
 		MaxAge: 12 * time.Hour,
 	}))
+	
 	store := cookie.NewStore([]byte("secret"))
 	store.Options(sessions.Options{
 		Path:     "/",
