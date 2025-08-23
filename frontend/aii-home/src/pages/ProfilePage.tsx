@@ -688,7 +688,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
                                   ) : (
                                     (postComments[post.id] || []).map(c => (
                                       <div key={c.id} className="p-3 rounded-xl bg-white border border-blue-100">
-                                        <div className="text-sm text-blue-500 mb-1">用户 {c.user_id}</div>
+                                        <div className="text-sm text-blue-500 mb-1">访客 {c.user_id}</div>
                                         <div className="text-blue-800 whitespace-pre-wrap">{c.content}</div>
                                       </div>
                                     ))
@@ -768,7 +768,7 @@ export function ProfilePage({ profileData, onProfileUpdate }: ProfilePageProps) 
                                   ) : (
                                     (statusComments[s.id] || []).map(c => (
                                       <div key={c.id} className="p-3 rounded-xl bg-white border border-blue-100">
-                                        <div className="text-sm text-blue-500 mb-1">用户 {c.user_id}</div>
+                                        <div className="text-sm text-blue-500 mb-1">访客 {c.user_id}</div>
                                         <div className="text-blue-800 whitespace-pre-wrap">{c.content}</div>
                                       </div>
                                     ))

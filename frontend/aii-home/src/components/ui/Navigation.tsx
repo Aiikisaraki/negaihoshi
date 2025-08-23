@@ -2,7 +2,7 @@
  * @Author: Aii如樱如月 morikawa@kimisui56.work
  * @Date: 2025-07-26 20:27:08
  * @LastEditors: Aii如樱如月 morikawa@kimisui56.work
- * @LastEditTime: 2025-08-20 19:07:55
+ * @LastEditTime: 2025-08-23 13:40:40
  * @FilePath: \negaihoshi\frontend\aii-home\src\components\Navigation.tsx
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
  */
@@ -26,8 +26,20 @@ export function Navigation({ isLoggedIn, onLogout, userProfile }: NavigationProp
   
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>(userProfile?.avatar);
-  // 弹窗登录已废弃，统一跳转 /login
   
+  // 添加调试日志
+  useEffect(() => {
+    console.log('Navigation组件接收到的props:', {
+      isLoggedIn,
+      userProfile,
+      hasNickname: !!userProfile?.nickname,
+      hasUsername: !!userProfile?.username,
+      nickname: userProfile?.nickname,
+      username: userProfile?.username
+    });
+  }, [isLoggedIn, userProfile]);
+  
+  // 弹窗登录已废弃，统一跳转 /login
 
   // 登录后或导航挂载时尝试获取最新头像
   useEffect(() => {
@@ -96,7 +108,7 @@ export function Navigation({ isLoggedIn, onLogout, userProfile }: NavigationProp
                         />
                       </div>
                       <span className="text-white font-medium text-sm hidden sm:inline">
-                        {userProfile?.nickname || userProfile?.username || '用户'}
+                        {userProfile?.nickname || userProfile?.username || '我'}
                       </span>
                       {/* 下拉箭头 */}
                       <svg 

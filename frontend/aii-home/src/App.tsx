@@ -69,6 +69,61 @@ function AppContent() {
     }
   }, []);
 
+  // 监听localStorage中userProfile的变化，确保登录后能正确显示用户信息
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const savedProfile = localStorage.getItem('userProfile');
+      if (savedProfile && isLoggedIn) {
+        try {
+          const profile = JSON.parse(savedProfile);
+          setProfileData(profile);
+        } catch (error) {
+          console.error('解析个人资料数据失败:', error);
+        }
+      }
+    };
+
+    // 监听storage事件（跨标签页同步）
+    window.addEventListener('storage', handleStorageChange);
+    
+    // 定期检查localStorage变化（同标签页内）
+    const interval = setInterval(() => {
+      const savedProfile = localStorage.getItem('userProfile');
+      if (savedProfile && isLoggedIn) {
+        try {
+          const profile = JSON.parse(savedProfile);
+          // 只有当数据真正变化时才更新状态
+          if (JSON.stringify(profile) !== JSON.stringify(profileData)) {
+            console.log('AppContent: 检测到profileData变化，更新状态:', {
+              old: profileData,
+              new: profile
+            });
+            setProfileData(profile);
+          }
+        } catch (error) {
+          console.error('解析个人资料数据失败:', error);
+        }
+      }
+    }, 1000); // 每秒检查一次
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      clearInterval(interval);
+    };
+  }, [isLoggedIn, profileData]);
+
+  // 添加调试日志
+  useEffect(() => {
+    console.log('AppContent: profileData状态变化:', {
+      isLoggedIn,
+      profileData,
+      hasNickname: !!profileData?.nickname,
+      hasUsername: !!profileData?.username,
+      nickname: profileData?.nickname,
+      username: profileData?.username
+    });
+  }, [isLoggedIn, profileData]);
+
   // 若已登录但本地资料缺少 id，则拉取服务器资料以补全 id
   useEffect(() => {
     const ensureProfileId = async () => {
@@ -102,6 +157,28 @@ function AppContent() {
           // 忽略：首次拉取资料失败
         }
       })();
+    }
+  }, [isLoggedIn]);
+
+  // 强制刷新用户资料（当登录状态变化时）
+  useEffect(() => {
+    if (isLoggedIn) {
+      const refreshProfile = async () => {
+        try {
+          console.log('AppContent: 登录状态变化，强制刷新用户资料');
+          const resp = await apiClient.get('/users/profile') as APIResponse<ProfileData & { id?: number }>;
+          if (resp.code === 200 && resp.data) {
+            console.log('AppContent: 获取到最新用户资料:', resp.data);
+            setProfileData(resp.data);
+            localStorage.setItem('userProfile', JSON.stringify(resp.data));
+          }
+        } catch (error) {
+          console.error('强制刷新用户资料失败:', error);
+        }
+      };
+      
+      // 延迟一点执行，确保登录流程完成
+      setTimeout(refreshProfile, 100);
     }
   }, [isLoggedIn]);
 
@@ -538,7 +615,7 @@ function HomePostsSection({ isLoggedIn }: { isLoggedIn: boolean }) {
                         ) : (
                           (comments[p.id] || []).map(c => (
                             <div key={c.id} className="p-3 rounded-xl bg-white/60">
-                              <div className="text-sm text-blue-500 mb-1">用户 {c.user_id}</div>
+                              <div className="text-sm text-blue-500 mb-1">访客 {c.user_id}</div>
                               <div className="text-blue-800 whitespace-pre-wrap">{c.content}</div>
                             </div>
                           ))

@@ -222,7 +222,7 @@ export function PostDetailPage() {
                     <AvatarImage src={author.avatar || ''} className="w-full h-full object-cover" />
                   </div>
                   <div className="text-right">
-                    <div className="text-blue-800 font-medium group-hover:text-blue-600 transition-colors">{author.nickname || author.username || `用户 ${author.id}`}</div>
+                    <div className="text-blue-800 font-medium group-hover:text-blue-600 transition-colors">{author.nickname || author.username || `访客 ${author.id}`}</div>
                     <div className="text-xs text-blue-500">作者</div>
                   </div>
                 </Link>
@@ -267,7 +267,7 @@ export function PostDetailPage() {
                     <div className="text-blue-600">还没有评论，来当第一个吧~</div>
                   ) : comments.map((c) => (
                     <div key={c.id} className="p-3 rounded-xl bg-white border border-blue-100">
-                      <div className="text-sm text-blue-500 mb-1">用户 {c.user_id}</div>
+                      <div className="text-sm text-blue-500 mb-1">访客 {c.user_id}</div>
                       <div className="text-blue-800 whitespace-pre-wrap">{c.content}</div>
                     </div>
                   ))}

@@ -19,11 +19,40 @@ export default function AvatarImage({
   fallbackNode,
 }: AvatarImageProps) {
   // 使用环境变量配置的API基础URL，移除/api后缀用于静态资源
-  const defaultBaseUrl = apiConfig.baseURL.replace('/api', '');
+  // 修复：确保baseURL是完整的URL，避免重复域名问题
+  const defaultBaseUrl = useMemo(() => {
+    const base = apiConfig.baseURL;
+    // 如果baseURL已经是完整的URL，直接移除/api部分
+    if (base.startsWith('http')) {
+      return base.replace('/api', '');
+    }
+    // 如果是相对路径，返回空字符串，避免重复拼接
+    return '';
+  }, []);
+  
   const finalBaseUrl = baseUrl || defaultBaseUrl;
+  
   const resolvedSrc = useMemo(() => {
     if (!src || src.trim() === '') return '';
-    return src.startsWith('http') ? src : `${finalBaseUrl}${src}`;
+    
+    // 如果src已经是完整的URL，直接返回
+    if (src.startsWith('http')) {
+      return src;
+    }
+    
+    // 如果src是相对路径，需要添加baseUrl
+    if (src.startsWith('/') && finalBaseUrl) {
+      return `${finalBaseUrl}${src}`;
+    }
+    
+    // 如果src是相对路径但没有baseUrl，返回空（显示fallback）
+    if (src.startsWith('/') && !finalBaseUrl) {
+      console.warn('AvatarImage: 相对路径头像需要baseUrl，但未提供:', src);
+      return '';
+    }
+    
+    // 其他情况，直接拼接
+    return `${finalBaseUrl}${src}`;
   }, [src, finalBaseUrl]);
 
   const [imgSrc, setImgSrc] = useState<string>(resolvedSrc);
@@ -34,6 +63,7 @@ export default function AvatarImage({
 
   const handleError = () => {
     // 加载失败（包括 404/400/401/跨域等）时回退
+    console.warn('AvatarImage: 头像加载失败:', resolvedSrc);
     setImgSrc('');
   };
 
