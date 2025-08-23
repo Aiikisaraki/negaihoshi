@@ -716,14 +716,50 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
             font-family: monospace;
             font-size: 1.1rem;
         }
+        .ssl-info {
+            background: rgba(74, 144, 226, 0.2);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-family: monospace;
+            font-size: 1rem;
+        }
+        .ssl-status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .ssl-status.secure {
+            background: #28a745;
+            color: white;
+        }
+        .ssl-status.insecure {
+            background: #dc3545;
+            color: white;
+        }
+        .ssl-status.unknown {
+            background: #ffc107;
+            color: #212529;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>API测试工具</h1>
         
+        <div class="ssl-info">
+            <strong>SSL状态:</strong> <span id="ssl-status" class="ssl-status unknown">检测中...</span>
+            <br>
+            <small id="ssl-details">正在检测浏览器SSL状态...</small>
+        </div>
+        
         <div class="api-base-url">
-            <strong>API基础URL:</strong> ` + apiBaseURL + `
+            <strong>API基础URL:</strong> <span id="api-base-url">` + apiBaseURL + `</span>
+            <br>
+            <small>基于浏览器当前协议自动检测</small>
         </div>
         
         <div id="api-list">
@@ -732,8 +768,56 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
     </div>
 
     <script>
-        // 设置API基础URL
-        const API_BASE_URL = '` + apiBaseURL + `';
+        // 检测浏览器SSL状态和协议
+        function detectSSLStatus() {
+            const sslStatus = document.getElementById('ssl-status');
+            const sslDetails = document.getElementById('ssl-details');
+            const apiBaseUrlSpan = document.getElementById('api-base-url');
+            
+            // 检测当前页面是否使用HTTPS
+            const isSecure = window.location.protocol === 'https:';
+            const currentProtocol = window.location.protocol;
+            const currentHost = window.location.host;
+            
+            // 更新SSL状态显示
+            if (isSecure) {
+                sslStatus.textContent = '安全 (HTTPS)';
+                sslStatus.className = 'ssl-status secure';
+                sslDetails.textContent = '当前页面使用HTTPS安全连接';
+            } else {
+                sslStatus.textContent = '不安全 (HTTP)';
+                sslStatus.className = 'ssl-status insecure';
+                sslDetails.textContent = '当前页面使用HTTP连接，建议使用HTTPS';
+            }
+            
+            // 动态更新API基础URL
+            const dynamicApiBaseURL = currentProtocol + '//' + currentHost;
+            apiBaseUrlSpan.textContent = dynamicApiBaseURL;
+            
+            // 更新全局API_BASE_URL变量
+            window.API_BASE_URL = dynamicApiBaseURL;
+            
+            console.log('SSL检测结果:', {
+                protocol: currentProtocol,
+                host: currentHost,
+                isSecure: isSecure,
+                apiBaseURL: dynamicApiBaseURL
+            });
+        }
+        
+        // 页面加载完成后检测SSL状态
+        document.addEventListener('DOMContentLoaded', function() {
+            detectSSLStatus();
+            
+            // 监听协议变化（如果用户手动切换协议）
+            window.addEventListener('beforeunload', function() {
+                // 页面即将卸载时重新检测
+                detectSSLStatus();
+            });
+        });
+        
+        // 设置API基础URL（初始值，会被动态更新）
+        let API_BASE_URL = '` + apiBaseURL + `';
         
         // 加载API列表
         fetch('/api/docs/json')
@@ -791,7 +875,10 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
             const responseDiv = section.querySelector('.response');
             const textarea = section.querySelector('textarea');
             
-            let url = API_BASE_URL + path;
+            // 使用动态检测的API基础URL
+            const currentApiBaseURL = window.API_BASE_URL || API_BASE_URL;
+            let url = currentApiBaseURL + path;
+            
             let options = {
                 method: method,
                 headers: {
@@ -836,6 +923,12 @@ func (a *APIDocsHandler) ShowAPITestPage(ctx *gin.Context) {
                     button.disabled = false;
                 });
         }
+        
+        // 添加协议切换检测
+        window.addEventListener('load', function() {
+            // 页面完全加载后再次检测
+            setTimeout(detectSSLStatus, 100);
+        });
     </script>
 </body>
 </html>`
