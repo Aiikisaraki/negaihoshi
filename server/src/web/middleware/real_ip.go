@@ -3,7 +3,6 @@ package middleware
 import (
 	"fmt"
 	"negaihoshi/server/src/util"
-	"net/http"
 	"time"
 
 	"github.com/gin-gonic/gin"

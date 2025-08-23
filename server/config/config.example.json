@@ -11,6 +11,36 @@
         "allow_credentials": true,
         "max_age": 43200
     },
+    "ip_detection": {
+        "enabled": true,
+        "trusted_proxies": [
+            "127.0.0.1",
+            "::1",
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16",
+            "frp.your-domain.com",
+            "proxy.your-domain.com"
+        ],
+        "trust_x_real_ip": true,
+        "trust_x_forwarded_for": true,
+        "trust_cf_connecting_ip": true,
+        "trust_last_x_forwarded_for": false,
+        "log_ip_info": true
+    },
+    "guest": {
+        "daily-treehole-limit": 10
+    },
+    "api-docs": {
+        "enabled": true,
+        "title": "Negaihoshi API",
+        "description": "Negaihoshi 后端API文档",
+        "version": "1.0.0",
+        "contact": {
+            "name": "Your Name",
+            "email": "your-email@example.com"
+        }
+    },
     "database": {
         "type": "mysql",
         "host": "localhost",
@@ -23,5 +53,23 @@
         "host": "localhost",
         "port": "6379",
         "password": ""
+    },
+    "storage": {
+        "type": "local",
+        "local": {
+            "path": "./uploads"
+        },
+        "tencent-cos": {
+            "secret-id": "",
+            "secret-key": "",
+            "bucket-url": "",
+            "region": ""
+        },
+        "aliyun-oss": {
+            "access-key-id": "",
+            "access-key-secret": "",
+            "endpoint": "",
+            "bucket-name": ""
+        }
     }
 }

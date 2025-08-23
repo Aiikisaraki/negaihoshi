@@ -129,7 +129,7 @@ func (cg *ConfigGenerator) GenerateConfig() error {
 	}
 
 	// 生成后端配置
-	backendConfig := cg.convertToBackendConfig(globalConfig)
+	backendConfig := cg.convertGlobalToBackend(globalConfig)
 
 	// 确保配置目录存在
 	configDir := filepath.Dir(cg.backendConfigPath)
@@ -161,23 +161,36 @@ func (cg *ConfigGenerator) readGlobalConfig() (*GlobalConfig, error) {
 	return &config, nil
 }
 
-// convertToBackendConfig 将全局配置转换为后端配置
-func (cg *ConfigGenerator) convertToBackendConfig(global *GlobalConfig) *Config {
+// convertGlobalToBackend 将全局配置转换为后端配置
+func (cg *ConfigGenerator) convertGlobalToBackend(global *GlobalConfig) *Config {
 	backend := &Config{}
 
-	// 转换前端前缀
-	backend.FrontendPrefix = []string{}
-	if global.Frontend.Main.Enabled {
-		backend.FrontendPrefix = append(backend.FrontendPrefix,
-			fmt.Sprintf("http://localhost:%d", global.Frontend.Main.Port))
-	}
-	if global.Frontend.Admin.Enabled {
-		backend.FrontendPrefix = append(backend.FrontendPrefix,
-			fmt.Sprintf("http://localhost:%d", global.Frontend.Admin.Port))
-	}
-
-	// 转换服务器端口
+	// 转换前端前缀配置
+	backend.FrontendPrefix = global.Server.Cors.Origins
 	backend.ServerPort = fmt.Sprintf("%d", global.Server.Port)
+
+	// 转换CORS配置
+	backend.CORS.Enabled = global.Server.Cors.Enabled
+	backend.CORS.AllowCredentials = true
+	backend.CORS.MaxAge = 43200
+
+	// 转换IP检测配置
+	backend.IPDetection.Enabled = true
+	backend.IPDetection.TrustedProxies = []string{
+		"127.0.0.1",
+		"::1",
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+	}
+	backend.IPDetection.TrustXRealIP = true
+	backend.IPDetection.TrustXForwardedFor = true
+	backend.IPDetection.TrustCFConnectingIP = true
+	backend.IPDetection.TrustLastXForwardedFor = false
+	backend.IPDetection.LogIPInfo = true
+
+	// 转换访客配置
+	backend.Guest.DailyTreeholeLimit = 10
 
 	// 转换API文档配置
 	backend.ApiDocs.Enabled = global.Features.ApiDocs
