@@ -62,6 +62,32 @@ func main() {
 		})
 	})
 
+	// IP信息端点
+	r.GET("/api/ip", func(c *gin.Context) {
+		realIP := middleware.GetRealIP(c)
+		remoteAddr := middleware.GetRemoteAddr(c)
+		ipHeaders := middleware.GetIPHeaders(c)
+		
+		// 获取IP详细信息
+		ipInfo := util.GetIPInfo(realIP)
+		
+		response := gin.H{
+			"real_ip":     realIP,
+			"remote_addr": remoteAddr,
+			"ip_info":     ipInfo,
+			"headers":     ipHeaders,
+			"timestamp":   time.Now().Unix(),
+		}
+		
+		// 如果启用了IP日志记录，记录到日志
+		if serverConfig.Config.IPDetection.LogIPInfo {
+			fmt.Printf("IP Info - RealIP: %s, RemoteAddr: %s, Headers: %v\n", 
+				realIP, remoteAddr, ipHeaders)
+		}
+		
+		c.JSON(200, response)
+	})
+
 	// 注意：uploads静态文件服务已经在initWebServer中配置，这里不需要重复配置
 	serverPort := serverConfig.GetServerPort()
 	r.Run(":" + serverPort)
@@ -114,6 +140,19 @@ func initWebServer(config *config.ConfigFunction) *gin.Engine {
 		MaxAge: 12 * time.Hour,
 	}))
 	
+	// 添加真实IP中间件
+	ipConfig := util.DefaultIPConfig()
+	if config.Config.IPDetection.Enabled {
+		ipConfig.TrustedProxies = config.Config.IPDetection.TrustedProxies
+		ipConfig.TrustXForwardedFor = config.Config.IPDetection.TrustXForwardedFor
+		ipConfig.TrustXRealIP = config.Config.IPDetection.TrustXRealIP
+		ipConfig.TrustCFConnectingIP = config.Config.IPDetection.TrustCFConnectingIP
+		ipConfig.TrustLastXForwardedFor = config.Config.IPDetection.TrustLastXForwardedFor
+	}
+	
+	realIPMiddleware := middleware.NewRealIPMiddleware(ipConfig)
+	r.Use(realIPMiddleware.Handle())
+	
 	store := cookie.NewStore([]byte("secret"))
 	store.Options(sessions.Options{
 		Path:     "/",
@@ -147,6 +186,7 @@ func initWebServer(config *config.ConfigFunction) *gin.Engine {
 		IgnorePaths("/api/test").
 		IgnorePaths("/api/docs/json").
 		IgnorePaths("/api/test/execute").
+		IgnorePaths("/api/ip").
 		IgnorePaths("/admin").
 		IgnorePaths("/admin/*").
 		IgnorePaths("/uploads").

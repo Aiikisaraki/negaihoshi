@@ -1,50 +1,47 @@
 package config
 
+// Config 配置结构体
 type Config struct {
 	FrontendPrefix []string `json:"frontend-prefix"`
 	ServerPort     string   `json:"server-port"`
-	Guest          struct {
-		DailyTreeholeLimit int `json:"daily-treehole-limit"`
-	} `json:"guest"`
-	ApiDocs struct {
-		Enabled     bool   `json:"enabled"`
-		Title       string `json:"title"`
-		Description string `json:"description"`
-		Version     string `json:"version"`
-		Contact     struct {
-			Name  string `json:"name"`
-			Email string `json:"email"`
-		} `json:"contact"`
-	} `json:"api-docs"`
-	Database struct {
-		Type         string `json:"type"`
-		Host         string `json:"host"`
-		Port         string `json:"port"`
-		User         string `json:"user"`
-		Password     string `json:"password"`
-		DatabaseName string `json:"database-name"`
-	} `json:"database"`
-	Redis struct {
-		Host     string `json:"host"`
-		Port     string `json:"port"`
-		Password string `json:"password"`
-	} `json:"redis"`
-	Storage struct {
-		Type  string `json:"type"` // "local", "tencent-cos", "aliyun-oss"
-		Local struct {
-			Path string `json:"path"`
-		} `json:"local"`
-		TencentCOS struct {
-			SecretID  string `json:"secret-id"`
-			SecretKey string `json:"secret-key"`
-			BucketURL string `json:"bucket-url"`
-			Region    string `json:"region"`
-		} `json:"tencent-cos"`
-		AliyunOSS struct {
-			AccessKeyID     string `json:"access-key-id"`
-			AccessKeySecret string `json:"access-key-secret"`
-			Endpoint        string `json:"endpoint"`
-			BucketName      string `json:"bucket-name"`
-		} `json:"aliyun-oss"`
-	} `json:"storage"`
+	ServerDomain   string   `json:"server-domain"`
+	CORS           CORSConfig `json:"cors"`
+	IPDetection    IPDetectionConfig `json:"ip_detection"`
+	Database       DatabaseConfig `json:"database"`
+	Redis          RedisConfig `json:"redis"`
+}
+
+// CORSConfig CORS配置
+type CORSConfig struct {
+	Enabled         bool `json:"enabled"`
+	AllowCredentials bool `json:"allow_credentials"`
+	MaxAge          int  `json:"max_age"`
+}
+
+// IPDetectionConfig IP检测配置
+type IPDetectionConfig struct {
+	Enabled                    bool     `json:"enabled"`
+	TrustedProxies            []string `json:"trusted_proxies"`
+	TrustXRealIP              bool     `json:"trust_x_real_ip"`
+	TrustXForwardedFor        bool     `json:"trust_x_forwarded_for"`
+	TrustCFConnectingIP       bool     `json:"trust_cf_connecting_ip"`
+	TrustLastXForwardedFor    bool     `json:"trust_last_x_forwarded_for"`
+	LogIPInfo                 bool     `json:"log_ip_info"`
+}
+
+// DatabaseConfig 数据库配置
+type DatabaseConfig struct {
+	Type         string `json:"type"`
+	Host         string `json:"host"`
+	Port         string `json:"port"`
+	User         string `json:"user"`
+	Password     string `json:"password"`
+	DatabaseName string `json:"database-name"`
+}
+
+// RedisConfig Redis配置
+type RedisConfig struct {
+	Host     string `json:"host"`
+	Port     string `json:"port"`
+	Password string `json:"password"`
 }
