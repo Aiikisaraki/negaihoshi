@@ -78,6 +78,68 @@ docker-compose -f docker-compose.simple.yml up -d mysql redis
 - **访问地址**: http://localhost:3001
 - **启动命令**: `docker-compose --profile admin up -d`
 
+## 🌐 前端路由配置（重要）
+
+**注意：** 部署后如果出现页面刷新404或直接访问路由404的问题，需要配置前端路由支持。
+
+### 问题说明
+1. **前端路由是客户端路由**：React Router 只在浏览器中生效
+2. **服务器不知道这些路由**：当用户直接访问 `/login` 时，服务器会寻找 `login.html` 文件
+3. **构建后的文件结构**：`dist` 目录只有 `index.html`，没有其他页面的HTML文件
+
+### Docker 环境配置
+
+项目中的 `nginx.conf` 已经配置了前端路由支持：
+
+```nginx
+# 处理前端路由 - 关键配置
+location / {
+    try_files $uri $uri/ /index.html;
+}
+
+# 或者更精确的路由配置
+location ~ ^/(login|signup|profile|create-post|create-status|post|status|admin) {
+    try_files $uri $uri/ /index.html;
+}
+```
+
+### 非 Docker 环境配置
+
+#### Nginx 配置
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    root /path/to/your/dist;
+    index index.html;
+
+    # 处理前端路由
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+#### Apache 配置
+在网站根目录创建 `.htaccess` 文件：
+```apache
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
+```
+
+#### Express.js 静态服务器
+```javascript
+app.use(express.static('dist'));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+```
+
+### 配置原理
+告诉服务器："如果找不到文件，就返回 `index.html`，让前端路由处理"
+
 ## 🔧 配置说明
 
 ### 环境变量
@@ -95,6 +157,26 @@ docker-compose -f docker-compose.simple.yml up -d mysql redis
 | `REDIS_PORT` | 6379 | Redis 端口 |
 | `REDIS_PASSWORD` | 空 | Redis 密码 |
 | `REDIS_DB` | 0 | Redis 数据库编号 |
+
+### 前端配置
+
+前端支持运行时配置，用户可以在部署后直接修改 `config.js` 文件：
+
+```javascript
+window.APP_CONFIG = {
+  // 修改这里为你的后端API地址
+  API_BASE_URL: 'https://your-api-domain.com/api',
+  API_TIMEOUT: 30000,
+  DEBUG_MODE: false,
+  VERSION: '1.0.0'
+};
+```
+
+**优点：**
+- ✅ 无需重新构建
+- ✅ 用户可以直接修改
+- ✅ 支持热更新
+- ✅ 配置持久化
 
 ### 数据持久化
 
@@ -247,6 +329,18 @@ deploy:
       memory: 512M
 ```
 
+#### 5. 前端路由404错误
+```bash
+# 检查 Nginx 配置
+docker-compose exec nginx nginx -t
+
+# 查看 Nginx 错误日志
+docker-compose logs nginx
+
+# 确认路由配置是否正确
+# 检查 nginx.conf 中的 try_files 配置
+```
+
 ### 日志分析
 
 #### 后端日志
@@ -265,6 +359,15 @@ docker-compose logs mysql | grep ERROR
 
 # 查看 Redis 日志
 docker-compose logs redis
+```
+
+#### 前端日志
+```bash
+# 查看 Nginx 访问日志
+docker-compose logs nginx
+
+# 查看前端构建日志
+docker-compose logs frontend
 ```
 
 ## 📈 性能优化
@@ -300,6 +403,21 @@ environment:
   VITE_DEBUG_MODE: false
 ```
 
+#### Nginx 优化
+```nginx
+# 启用 gzip 压缩
+gzip on;
+gzip_vary on;
+gzip_min_length 1024;
+gzip_comp_level 6;
+
+# 静态资源缓存
+location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+    expires 1y;
+    add_header Cache-Control "public, immutable";
+}
+```
+
 ## 🔄 备份和恢复
 
 ### 数据库备份
@@ -326,3 +444,23 @@ docker-compose exec redis redis-cli FLUSHALL
 - [Docker Compose 文档](https://docs.docker.com/compose/)
 - [MySQL Docker 镜像](https://hub.docker.com/_/mysql)
 - [Redis Docker 镜像](https://hub.docker.com/_/redis)
+- [前端部署配置指南](./frontend/aii-home/DEPLOYMENT_GUIDE.md)
+- [Nginx 配置参考](./frontend/aii-home/nginx.conf)
+- [Apache 配置参考](./frontend/aii-home/public/.htaccess)
+
+## 🆘 获取帮助
+
+如果遇到问题：
+
+1. **检查日志**：使用 `docker-compose logs` 查看服务日志
+2. **查看状态**：使用 `docker-compose ps` 检查服务状态
+3. **参考配置**：检查 `nginx.conf` 和 `.htaccess` 文件
+4. **前端路由问题**：确保 Web 服务器配置了前端路由支持
+5. **API 配置问题**：检查 `config.js` 文件中的 API 地址配置
+
+---
+
+**重要提示**：
+- 部署后必须配置前端路由支持，否则会出现页面刷新404的问题
+- 前端支持运行时配置，用户可以直接修改 `config.js` 文件
+- 如果使用 Docker 部署，项目已包含完整的 Nginx 配置

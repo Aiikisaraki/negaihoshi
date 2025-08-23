@@ -22,11 +22,32 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       allowedHosts: [], // 可配置允许的hostname
     },
+    preview: {
+      host: '0.0.0.0',
+      port: 4173,
+    },
     // 定义环境变量
     define: {
       __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
     },
     // 环境变量配置
     envPrefix: 'VITE_',
+    // 构建配置
+    build: {
+      // 确保构建后的文件结构正确
+      outDir: 'dist',
+      assetsDir: 'assets',
+      // 生成 sourcemap（生产环境可以关闭）
+      sourcemap: mode === 'development',
+      // 配置 rollup 选项
+      rollupOptions: {
+        output: {
+          // 确保入口文件正确
+          entryFileNames: 'assets/[name]-[hash].js',
+          chunkFileNames: 'assets/[name]-[hash].js',
+          assetFileNames: 'assets/[name]-[hash].[ext]'
+        }
+      }
+    }
   }
 })

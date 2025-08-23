@@ -29,7 +29,7 @@ npm run build:prod
 // 修改 public/config.js 文件
 window.APP_CONFIG = {
   // 修改这里为你的后端API地址
-  API_BASE_URL: 'https://your-api-domain.com/api',
+  API_BASE_URL: 'https://your-production-api.com/api',
   
   // 其他配置保持不变
   API_TIMEOUT: 30000,
@@ -67,6 +67,60 @@ window.APP_CONFIG = {
 VITE_API_BASE_URL=https://your-api-domain.com/api npm run build:prod
 ```
 
+## 🌐 解决前端路由404问题
+
+**重要：** 部署后如果出现页面刷新404或直接访问路由404的问题，需要配置Web服务器支持前端路由。
+
+### Nginx 配置
+
+在 Nginx 配置文件中添加：
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+    root /path/to/your/dist;
+    index index.html;
+
+    # 处理前端路由 - 关键配置
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+
+    # 或者更精确的路由配置
+    location ~ ^/(login|signup|profile|create-post|create-status|post|status|admin) {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+### Apache 配置
+
+在网站根目录创建 `.htaccess` 文件：
+
+```apache
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
+```
+
+### Express.js 静态服务器
+
+```javascript
+app.use(express.static('dist'));
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+});
+```
+
+### 为什么需要这个配置？
+
+1. **前端路由是客户端路由**：React Router 只在浏览器中生效
+2. **服务器不知道这些路由**：当用户直接访问 `/login` 时，服务器会寻找 `login.html` 文件
+3. **构建后的文件结构**：`dist` 目录只有 `index.html`，没有其他页面的HTML文件
+4. **配置原理**：告诉服务器"如果找不到文件，就返回 `index.html`，让前端路由处理"
+
 ## 🌍 不同环境配置示例
 
 ### 开发环境
@@ -99,6 +153,7 @@ DEBUG_MODE: false
 frontend/aii-home/
 ├── public/
 │   ├── config.js          # 运行时配置文件（用户可修改）
+│   ├── .htaccess          # Apache 路由配置
 │   └── favicon.ico
 ├── src/
 │   ├── config/
@@ -107,6 +162,7 @@ frontend/aii-home/
 │       └── ui/
 │           └── ConfigManager.tsx  # 配置管理界面
 ├── dist/                  # 构建输出目录
+├── nginx.conf             # Nginx 配置示例
 └── index.html             # 主页面
 ```
 
@@ -138,6 +194,7 @@ window.APP_CONFIG = {
 2. **文件权限**：确保Web服务器有权限读取 `config.js` 文件
 3. **缓存问题**：如果修改配置后没有生效，请清除浏览器缓存
 4. **HTTPS要求**：如果前端使用HTTPS，后端API也必须使用HTTPS或配置为允许混合内容
+5. **路由配置**：必须配置Web服务器支持前端路由，否则会出现404错误
 
 ## 🐛 故障排除
 
@@ -156,13 +213,22 @@ window.APP_CONFIG = {
 - 查看是否有JavaScript错误
 - 确认构建是否成功
 
+### 页面刷新404错误
+- 检查Web服务器是否正确配置了前端路由支持
+- 确认 `try_files` 或 `.htaccess` 配置是否正确
+- 查看服务器错误日志
+
 ## 📞 技术支持
 
 如果遇到问题，请检查：
 1. 浏览器控制台的错误信息
 2. 网络请求的状态码
 3. 配置文件格式是否正确
+4. Web服务器的路由配置是否正确
 
 ---
 
-**提示**：推荐使用"方法1"（修改配置文件），这样用户可以在部署后直接修改，无需重新构建或部署。
+**提示**：
+1. 推荐使用"方法1"（修改配置文件），这样用户可以在部署后直接修改，无需重新构建或部署
+2. **必须配置Web服务器支持前端路由**，否则会出现页面刷新404的问题
+3. 如果使用Docker部署，可以参考项目中的 `docker-compose.yml` 和 `nginx.conf` 配置
